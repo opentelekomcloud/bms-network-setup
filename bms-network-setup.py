@@ -17,6 +17,7 @@ import commands
 
 
 IS_SUSE = os.path.exists("/etc/SuSE-release")
+DEBUG = 0
 # Arg parsing
 for arg in sys.argv[1:]:
     if arg == "-d":
@@ -30,12 +31,14 @@ for arg in sys.argv[1:]:
 
 NETCONFPATH = "."
 WICKEDCONFPATH = "."
+CONFDIR="."
 if not DEBUG:
     if IS_SUSE:
         NETCONFPATH = "/etc/sysconfig/network/"
     else:
 	NETCONFPATH = "/etc/sysconfig/network-scripts/"
     WICKEDCONFPATH = "/etc/wicked/ifconfig/"
+    CONFDIR = "/etc"
 OS_LATEST = 'latest'
 #FS_TYPES = ('vfat', 'iso9660')
 LABEL = 'config-2'
@@ -291,11 +294,19 @@ def process_network_hw():
     bond_slaves=[]
     bond_map = {}
     ret, network_json = get_network_json_hw()
+    if ret:
+        try:
+            os.unlink("%s/is_bms" % CONFDIR)
+        except:
+            pass
+        print >>sys.stderr, "Not running on BMS"
+        sys.exit(0)
+    file("%s/is_bms" % CONFDIR, "w")
     for ljson in network_json["links"]:
         if ljson["type"] == "bond":
             bond_slaves += ljson["bond_links"]
             bond_map[bondnm(ljson["id"])] = ljson["bond_links"]
-    #print "Bond Slaves: %s" % bond_slaves
+    print >>sys.stderr, "Set up bonding: %s" % bond_map
     if IS_SUSE:
         IFCFG_PHY  = IFCFG_PHY_SUSE
         IFCFG_BOND = IFCFG_BOND_SUSE 

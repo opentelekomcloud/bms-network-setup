@@ -123,7 +123,7 @@ BONDNM=6
 # Transformation rules
 IFCFG_PHY_SUSE = (
     ('LLADDR', 'ethernet_mac_address', OPT),
-    ('USERCONTRL', 'no', HARD),
+#    ('USERCONTROL', 'no', HARD),
     ('MTU', 'mtu', OPT),
     ('STARTMODE', 'auto', HARD),
     ('NM_CONTROLLED', 'no', HARD),
@@ -138,7 +138,7 @@ IFCFG_PHY_SUSE = (
 
 IFCFG_BOND_SUSE = (
     ('LLADDR', 'ethernet_mac_address', OPT),
-    ('USERCONTRL', 'no', HARD),
+#    ('USERCONTROL', 'no', HARD),
     ('MTU', 'mtu', OPT),
     ('BONDING_MASTER', 'yes', HARD),
     ('STARTMODE', 'auto', HARD),

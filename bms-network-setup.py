@@ -15,19 +15,13 @@ import base64
 import six
 import commands
 
-BOND_TPL_OPTS = tuple([
-    ('bond_mode', "mode=%s"),
-    ('bond_xmit_hash_policy', "xmit_hash_policy=%s"),
-    ('bond_miimon', "miimon=%s"),
-])
-
 NETCONFPATH = "."
 WICKEDCONFPATH = "."
 if (len(sys.argv) <= 1 or sys.argv[1] != "-d"):
 	NETCONFPATH = "/etc/sysconfig/network/"
 	WICKEDCONFPATH = "/etc/wicked/ifconfig/"
 OS_LATEST = 'latest'
-FS_TYPES = ('vfat', 'iso9660')
+#FS_TYPES = ('vfat', 'iso9660')
 LABEL = 'config-2'
 
 
@@ -56,33 +50,6 @@ def load_json_hw(text, root_types=(dict,)):
         raise TypeError("(%s) root types expected, got %s instead"
                         % (expects, type(decoded)))
     return decoded
-
-# Unused
-def modprobe_bonding_hw():
-    cmd = 'lsmod |grep bonding'
-    (status, output) = commands.getstatusoutput(cmd)
-    LOG.info("lsmod bonding status is  %s, output is  %s" % (status, output))
-    if status:
-        cmd = 'modprobe bonding'
-        (status, output) = commands.getstatusoutput(cmd)
-        LOG.info("modprobe bonding status is  %s, output is  %s" % (status, output))
-        if status:
-            LOG.error("modprobe bonding error, because %s" % output)
-            return False
-    return True
-
-
-# Unused
-def modprobe_vlan_hw():
-    cmd = 'lsmod |grep 8021q'
-    (status, output) = commands.getstatusoutput(cmd)
-    if status:
-        cmd = 'modprobe 8021q'
-        (status, output) = commands.getstatusoutput(cmd)
-        if status:
-            LOG.error("modprobe vlan error, because %s" % output)
-            return False
-    return True
 
 
 # Unused

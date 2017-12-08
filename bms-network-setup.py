@@ -15,15 +15,6 @@ import base64
 import six
 import commands
 
-BOND_CONF = ['LLADDR', 'USERCONTRL', 'BONDING_MASTER',
-             'STARTMODE', 'NM_CONTROLLED', 'BOOTPROTO',
-             'BONDING_MODULE_OPTS', 'DEVICE', 'TYPE', 'IPADDR', 'NETMASK',
-             'BONDING_SLAVE0', 'BONDING_SLAVE1', 'BONDING_SLAVE2', 'BONDING_SLAVE3']
-
-VLAN_CONF = ['LLADDR', 'USERCONTRL', 'ETHERDEVICE', 'MTU',
-             'STARTMODE', 'NM_CONTROLLED', 'BOOTPROTO',
-             'DEVICE', 'TYPE', 'VLAN_ID', 'IPADDR', 'NETMASK', 'GATEWAY']
-
 BOND_TPL_OPTS = tuple([
     ('bond_mode', "mode=%s"),
     ('bond_xmit_hash_policy', "xmit_hash_policy=%s"),
@@ -104,6 +95,10 @@ def write_wicked_conf_hw():
         return False
     return True
 
+# Unused
+VLAN_CONF = ['LLADDR', 'USERCONTRL', 'ETHERDEVICE', 'MTU',
+             'STARTMODE', 'NM_CONTROLLED', 'BOOTPROTO',
+             'DEVICE', 'TYPE', 'VLAN_ID', 'IPADDR', 'NETMASK', 'GATEWAY']
 
 # Marker for filling in the templates
 # Optional and Mandatory fields that can be taken literally from JSON

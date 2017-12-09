@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-# 
+# vi:set ts=4 sw=4:
 # Simple script to parse network_data.json and derive working ifcfg- files
 # This is a minimalistic version for supporting OTC bare metal networks.
 # Losely based on Huawei's bms-network-config.
@@ -13,13 +13,13 @@ import json
 import logging
 import base64
 import six
-import commands
+import subprocess
 
 
 def usage():
-    print >>sys.stderr, "Usage: bms-network-setup.py [-d] [-s]"
-    print >>sys.stderr, " -d: Debug: reads network_data.json and writes ifcfg-* in current dir"
-    print >>sys.stderr, " -s: SuSE: assume we run on a SuSE distribution"
+    six.print_("Usage: bms-network-setup.py [-d] [-s]", file=sys.stderr)
+    six.print_(" -d: Debug: reads network_data.json and writes ifcfg-* in current dir", file=sys.stderr)
+    six.print_(" -s: SuSE: assume we run on a SuSE distribution", file=sys.stderr)
     sys.exit(1)
 
 # Global settings
@@ -32,8 +32,8 @@ for arg in sys.argv[1:]:
     elif arg == "-s":
         IS_SUSE = 1
     else:
-        print >>sys.stderr, "UNKNOWN ARG %s" % arg
-	usage()
+        six.print_("UNKNOWN ARG %s" % arg, file=sys.stderr)
+        usage()
 
 NETCONFPATH = "."
 WICKEDCONFPATH = "."
@@ -44,7 +44,7 @@ if not DEBUG:
     if IS_SUSE:
         NETCONFPATH = "/etc/sysconfig/network/"
     else:
-	NETCONFPATH = "/etc/sysconfig/network-scripts/"
+        NETCONFPATH = "/etc/sysconfig/network-scripts/"
 OS_LATEST = 'latest'
 #FS_TYPES = ('vfat', 'iso9660')
 LABEL = 'config-2'
@@ -83,7 +83,11 @@ def load_json_hw(text, root_types=(dict,)):
 def write_wicked_conf_hw():
     "rebuild wicked configuration"
     cmd = '/usr/sbin/wicked convert --output %s %s' % (WICKEDCONFPATH, NETCONFPATH)
-    (status, output) = commands.getstatusoutput(cmd)
+    status = 0
+    try:
+        output = subprocess.check_output(cmd, stderr=subprocess.STDOUT)
+    except subprocess.CalledProcessError as exc:
+        status = exc.returncode
     LOG.info("convert wicked conf status is  %s, output is  %s" % (status, output))
     if status:
         LOG.error("convert wicked conf error, because %s" % output)
@@ -263,14 +267,12 @@ def process_template(template, njson):
 def mount(dev, path):
     "mount filesystem on dev at path"
     cmd = 'mount -o ro %s %s' % (dev, path)
-    (status, output) = commands.getstatusoutput(cmd)
-    return status
+    return subprocess.call(cmd)
 
 def umount(path):
     "umount filesystem at path"
     cmd = 'umount %s' % path
-    (status, output) = commands.getstatusoutput(cmd)
-    return status
+    return subprocess.call(cmd)
 
 
 def is_mounted(dev):
@@ -320,28 +322,28 @@ def process_network_hw():
             os.unlink("%s/is_bms" % CONFDIR)
         except:
             pass
-        print >>sys.stderr, "Not running on BMS"
+        six.print_("Not running on BMS", file=sys.stderr)
         sys.exit(0)
-    file("%s/is_bms" % CONFDIR, "w")
+    open("%s/is_bms" % CONFDIR, "w")
     for ljson in network_json["links"]:
         if ljson["type"] == "bond":
             bond_slaves += ljson["bond_links"]
             bond_map[bondnm(ljson["id"])] = ljson["bond_links"]
-    print >>sys.stderr, "Set up bonding: %s" % bond_map
+    six.print_("Set up bonding: %s" % bond_map, file=sys.stderr)
     if IS_SUSE:
         IFCFG_PHY  = IFCFG_PHY_SUSE
         IFCFG_BOND = IFCFG_BOND_SUSE 
     else:
         IFCFG_PHY  = IFCFG_PHY_REDHAT
         IFCFG_BOND = IFCFG_BOND_REDHAT
-    #print network_json
+    #six.print_(network_json)
     for ljson in network_json["links"]:
         if ljson["type"] == "phy":
-            f = file("%s/ifcfg-%s" % (NETCONFPATH, ljson["name"]), "w")
-            print >>f, process_template(IFCFG_PHY, ljson)
+            f = open("%s/ifcfg-%s" % (NETCONFPATH, ljson["name"]), "w")
+            six.print_(process_template(IFCFG_PHY, ljson), file=f)
         elif ljson["type"] == "bond":
-            f = file("%s/ifcfg-%s" % (NETCONFPATH, bondnm(ljson["id"])), "w")
-            print >>f, process_template(IFCFG_BOND, ljson)
+            f = open("%s/ifcfg-%s" % (NETCONFPATH, bondnm(ljson["id"])), "w")
+            six.print_(process_template(IFCFG_BOND, ljson), file=f)
 
 # Entry point
 if __name__ == "__main__":

@@ -184,6 +184,13 @@ IFCFG_BOND_REDHAT = (
 
 #TODO: Check for other well-defined parameters (cloud-init? OpenStack standards)
 
+if IS_SUSE:
+	IFCFG_PHY  = IFCFG_PHY_SUSE
+	IFCFG_BOND = IFCFG_BOND_SUSE
+else:
+	IFCFG_PHY  = IFCFG_PHY_REDHAT
+	IFCFG_BOND = IFCFG_BOND_REDHAT
+
 
 def maybedhcp(dev):
 	"return dhcp if dev is not a bond slave, none otherwise"
@@ -322,20 +329,18 @@ def process_network_hw():
 			os.unlink("%s/is_bms" % CONFDIR)
 		except:
 			pass
-		six.print_("Not running on BMS", file=sys.stderr)
+		six.print_("Not running on BMS, exiting", file=sys.stderr)
 		sys.exit(0)
-	open("%s/is_bms" % CONFDIR, "w")
 	for ljson in network_json["links"]:
 		if ljson["type"] == "bond":
 			bond_slaves += ljson["bond_links"]
 			bond_map[bondnm(ljson["id"])] = ljson["bond_links"]
+	if not bond_slaves:
+		six.print_("No BMS bond devices configured, exiting", file=sys.stderr)
+		sys.exit(0)
+
 	six.print_("Set up bonding: %s" % bond_map, file=sys.stderr)
-	if IS_SUSE:
-		IFCFG_PHY  = IFCFG_PHY_SUSE
-		IFCFG_BOND = IFCFG_BOND_SUSE 
-	else:
-		IFCFG_PHY  = IFCFG_PHY_REDHAT
-		IFCFG_BOND = IFCFG_BOND_REDHAT
+	open("%s/is_bms" % CONFDIR, "w")
 	#six.print_(network_json)
 	for ljson in network_json["links"]:
 		if ljson["type"] == "phy":

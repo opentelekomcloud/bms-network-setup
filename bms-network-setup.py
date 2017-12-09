@@ -85,7 +85,7 @@ def write_wicked_conf_hw():
 	cmd = '/usr/sbin/wicked convert --output %s %s' % (WICKEDCONFPATH, NETCONFPATH)
 	status = 0
 	try:
-		output = subprocess.check_output(cmd, stderr=subprocess.STDOUT)
+		output = subprocess.check_output(cmd.split(" "), stderr=subprocess.STDOUT)
 	except subprocess.CalledProcessError as exc:
 		status = exc.returncode
 	LOG.info("convert wicked conf status is	 %s, output is	%s" % (status, output))
@@ -274,12 +274,12 @@ def process_template(template, njson):
 def mount(dev, path):
 	"mount filesystem on dev at path"
 	cmd = 'mount -o ro %s %s' % (dev, path)
-	return subprocess.call(cmd)
+	return subprocess.call(cmd.split(" "))
 
 def umount(path):
 	"umount filesystem at path"
 	cmd = 'umount %s' % path
-	return subprocess.call(cmd)
+	return subprocess.call(cmd.split(" "))
 
 
 def is_mounted(dev):

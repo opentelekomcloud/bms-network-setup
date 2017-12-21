@@ -153,7 +153,7 @@ IFCFG_PHY_REDHAT = (
 	('ONBOOT', 'yes', HARD),
 	('NM_CONTROLLED', 'yes', HARD),
 	('BOOTPROTO', '', MAYBEDHCP),
-#	('DEVICE', 'name', MAND),
+	('DEVICE', 'name', MAND),
 	('TYPE', 'Ethernet', HARD),
 #	 ('VLAN_ID', 'vlan_id', OPT),
 	('MASTER', '', BONDMASTER),
@@ -360,6 +360,25 @@ def get_network_json_hw():
 		umount("/mnt")
 		return ret, json
 
+def fix_name(ljson):
+	"Find real name of eth device with mac address and adjust ljson"
+	# Note: We could also rename the iface to match network_data.json
+	nm = ljson["name"]
+	mac = ljson["ethernet_mac_address"]
+	if os.access("/sys/class/net/%s/address" % nm, os.R_OK):
+		devmac = open("/sys/class/net/%s/address" % nm, "r").read().rstrip()
+		if devmac == mac:
+			return
+	for dev in os.listdir("/sys/class/net/"):
+		try:
+			devmac = open("/sys/class/net/%s/address" % dev, "r").read().rstrip()
+			if devmac == mac:
+				six.print_("Use dev %s instead of %s" % (dev, nm), file=sys.stderr)
+				ljson["name"] = dev
+				return
+		except:
+			pass
+
 def process_network_hw():
 	"get network_data.json and process it"
 	global bond_slaves
@@ -394,6 +413,9 @@ def process_network_hw():
 	#six.print_(network_json)
 	for ljson in network_json["links"]:
 		if ljson["type"] == "phy":
+			# FIXME: On RHEL, we need to find out the real name
+			if not IS_SUSE:
+				fix_name(ljson)
 			f = open("%s/ifcfg-%s" % (NETCONFPATH, ljson["name"]), "w")
 			six.print_(process_template(IFCFG_PHY, ljson, njson, sjson), file=f)
 		elif ljson["type"] == "bond":

@@ -147,13 +147,13 @@ IFCFG_BOND_SUSE = (
 
 # Template for ifcfg-eth* on RedHat
 IFCFG_PHY_REDHAT = (
-#	 ('MACADDR', 'ethernet_mac_address', OPT),
+	('MACADDR', 'ethernet_mac_address', OPT),
 	('USERCTL', 'no', HARD),
 	('MTU', 'mtu', OPT),
 	('ONBOOT', 'yes', HARD),
 	('NM_CONTROLLED', 'yes', HARD),
 	('BOOTPROTO', '', MAYBEDHCP),
-	('DEVICE', 'name', MAND),
+#	('DEVICE', 'name', MAND),
 	('TYPE', 'Ethernet', HARD),
 #	 ('VLAN_ID', 'vlan_id', OPT),
 	('MASTER', '', BONDMASTER),

@@ -109,7 +109,7 @@ BONDMODOPTS=4
 BONDSLAVEX=5
 # special fn to create bondX name
 BONDNM=6
-# special fn to list bond master
+# special fn to list bond master (and set SLAVE=yes)
 BONDMASTER=7
 # special fn to set DHCP / STATIC for bond
 BONDDHCP=8
@@ -147,7 +147,8 @@ IFCFG_BOND_SUSE = (
 
 # Template for ifcfg-eth* on RedHat
 IFCFG_PHY_REDHAT = (
-	('MACADDR', 'ethernet_mac_address', OPT),
+#	('MACADDR', 'ethernet_mac_address', OPT),
+	('HWADDR', 'ethernet_mac_address', OPT),
 	('USERCTL', 'no', HARD),
 	('MTU', 'mtu', OPT),
 	('ONBOOT', 'yes', HARD),
@@ -157,12 +158,12 @@ IFCFG_PHY_REDHAT = (
 	('TYPE', 'Ethernet', HARD),
 #	 ('VLAN_ID', 'vlan_id', OPT),
 	('MASTER', '', BONDMASTER),
-#	 ('SLAVE', 'yes', HARD),
 )
 
 # Template for ifcfg-bond* on RedHat
 IFCFG_BOND_REDHAT = (
-	('MACADDR', 'ethernet_mac_address', OPT),
+#	('MACADDR', 'ethernet_mac_address', OPT),
+	('HWADDR', 'ethernet_mac_address', OPT),
 	('USERCTL', 'no', HARD),
  #	 ('MTU', 'mtu', OPT),
 	('BONDING_MASTER', 'yes', HARD),

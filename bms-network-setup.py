@@ -361,8 +361,8 @@ def get_network_json_hw():
 		return ret, json
 
 def fix_name(ljson):
-	"Find real name of eth device with mac address and adjust ljson"
-	# Note: We could also rename the iface to match network_data.json
+	"Find real name of eth device with mac address and rename interface"
+	# Note: We could also rename the iface in json
 	nm = ljson["name"]
 	mac = ljson["ethernet_mac_address"]
 	if os.access("/sys/class/net/%s/address" % nm, os.R_OK):
@@ -373,11 +373,18 @@ def fix_name(ljson):
 		try:
 			devmac = open("/sys/class/net/%s/address" % dev, "r").read().rstrip()
 			if devmac == mac:
-				six.print_("Use dev %s instead of %s" % (dev, nm), file=sys.stderr)
-				ljson["name"] = dev
+				six.print_("Rename %s -> %s" % (nm, dev), file=sys.stderr)
+				#ljson["name"] = dev
+				cmd = "ip link set dev %s name %s" % (dev, nm)
+				out = ""
+				try:
+					out = subprocess.check_output(cmd.split(" "), stdrr=subprocess.STDOUT)
+				except:
+					six.print_("FAIL: %s" % out, file=sys.stderr)
 				return
 		except:
 			pass
+
 
 def process_network_hw():
 	"get network_data.json and process it"

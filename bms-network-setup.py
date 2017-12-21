@@ -375,10 +375,13 @@ def fix_name(ljson):
 			if devmac == mac:
 				six.print_("Rename %s -> %s" % (nm, dev), file=sys.stderr)
 				#ljson["name"] = dev
-				cmd = "ip link set dev %s name %s" % (dev, nm)
+				cmd1 = "ip link set dev %s down" % nm
+				cmd2 = "ip link set dev %s name %s" % (nm, dev)
+				cmd3 = "ip link set dev %s up" % dev
 				out = ""
 				try:
-					out = subprocess.check_output(cmd.split(" "), stdrr=subprocess.STDOUT)
+					out = subprocess.check_output(cmd1.split(" "), stderr=subprocess.STDOUT)
+					out = subprocess.check_output(cmd2.split(" "), stderr=subprocess.STDOUT)
 				except:
 					six.print_("FAIL: %s" % out, file=sys.stderr)
 				return

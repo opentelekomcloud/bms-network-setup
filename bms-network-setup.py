@@ -162,8 +162,8 @@ IFCFG_PHY_REDHAT = (
 
 # Template for ifcfg-bond* on RedHat
 IFCFG_BOND_REDHAT = (
-#	('MACADDR', 'ethernet_mac_address', OPT),
-	('HWADDR', 'ethernet_mac_address', OPT),
+	('MACADDR', 'ethernet_mac_address', OPT),
+#	('HWADDR', 'ethernet_mac_address', OPT),
 	('USERCTL', 'no', HARD),
  #	 ('MTU', 'mtu', OPT),
 	('BONDING_MASTER', 'yes', HARD),

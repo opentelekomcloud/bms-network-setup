@@ -418,7 +418,7 @@ def rename_if(old, new):
 		six.print_("FAIL: %s" % out, file=sys.stderr)
 
 
-def fix_name(ljson, renameIF):
+def fix_name(ljson, renameIF = True):
 	"""Find real name of eth device with mac address and rename interface
 	   If renameIF is not set, we will change the name in JSON instead."""
 	nm = ljson["name"]
@@ -431,10 +431,10 @@ def fix_name(ljson, renameIF):
 		try:
 			devmac = open("/sys/class/net/%s/address" % dev, "r").read().rstrip()
 			if devmac == mac:
-				if not renameIF:
-					ljson["name"] = dev
-				else:
+				if renameIF:
 					rename_if(nm, dev)
+				else:
+					ljson["name"] = dev
 				return
 		except:
 			pass

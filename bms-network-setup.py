@@ -191,6 +191,21 @@ IFCFG_BOND_REDHAT = (
 	('TYPE', 'Bond', HARD),
 )
 
+# Template for vlans
+IFCFG_VLAN_REDHAT = (
+	('VLAN', 'yes', HARD),
+	('VLAN_NAME_TYPE', 'VLAN_PLUS_VID_NO_PAD', HARD),
+	('MACADDR', 'vlan_mac_address', MAND),
+	('USERCTL', 'no', HARD),
+	('MTU', 'mtu', OPT),
+	('ONBOOT', 'yes', HARD),
+	('BOOTPROTO', 'dhcp', BONDDHCP),
+	('DEVICE', 'vlan_id', VLANNAME),
+	('PHYSDEV', 'vlan_link', BONDNM)
+)
+
+
+# Snippets for static address config
 IFCFG_STATIC_SUSE = (
 	('BOOTPROTO', 'static', HARD),
 	('IPADDR', 'ip_address', MAND),
@@ -199,8 +214,8 @@ IFCFG_STATIC_SUSE = (
 )
 
 IFCFG_STATIC_REDHAT = (
-	('BOOTPROTO', 'none', HARD),
-	('ADDRESS', 'ip_address', MAND),
+	('BOOTPROTO', 'none', HARD),	# static?
+	('IPADDR', 'ip_address', MAND),	# ADDRESS?
 	('NETMASK', 'netmask', MAND),
 	('GATEWAY', 'gateway', OPT),
 	('DNSx', '', NAMESERVERS),
@@ -217,7 +232,7 @@ else:
 	IFCFG_PHY  = IFCFG_PHY_REDHAT
 	IFCFG_BOND = IFCFG_BOND_REDHAT
 	IFCFG_STAT = IFCFG_STATIC_REDHAT
-	IFCFG_VLAN = ()
+	IFCFG_VLAN = IFCFG_VLAN_REDHAT
 
 
 def maybedhcp(dev):

@@ -10,13 +10,15 @@ However, to even get networking working, we need to parse and evaluate network_d
 This scripts does this by parsing it and then writing out the network ifcfg-* files and then leaves
 it to the standard distribution networking mechanisms (wicked, ifup, NetworkManager, ...) to do the network setup.
 
-In our package (on OpenBuildService in [home:garloff:OTC](https://build.opensuse.org/home:/garloff:/OTC/bms-network-setup)), i
+In our package (on OpenBuildService 
+in [home:garloff:OTC](https://build.opensuse.org/package/show/home:garloff:OTC/bms-network-setup)), 
 we also have the mechanism to dynamically disable the
 ConfigDrive data source IF running on an OTC BMS.
 
 ## Other options
-This is a different approach from bms-network-config, that does a lot more and duplicates some of the things that
-cloud-init does.
+This is a different approach from [bms-network-config](https://github.com/bms-network/bms-network-config).
+bms-network-config does a lot more and duplicates some of the things that cloud-init and the
+distro network setup scripts/NM/wickedd do.
 
 ## Examples
 network_data.json

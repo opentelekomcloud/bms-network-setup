@@ -115,6 +115,8 @@ BONDMASTER=7
 BONDDHCP=8
 # special fn to set up nameservers
 NAMESERVERS=9
+# special fn to compose vlan name vlan$ID
+VLANNAME=10
 
 # Transformation rules
 # Template for ifcfg-eth* on SuSE
@@ -133,17 +135,31 @@ IFCFG_PHY_SUSE = (
 # Template for ifcfg-bond* on SuSE
 IFCFG_BOND_SUSE = (
 	('LLADDR', 'ethernet_mac_address', OPT),
-#	 ('USERCONTROL', 'no', HARD),
-#	 ('MTU', 'mtu', OPT),
+#	('USERCONTROL', 'no', HARD),
+#	('MTU', 'mtu', OPT),
 	('BONDING_MASTER', 'yes', HARD),
 	('STARTMODE', 'auto', HARD),
 	('NM_CONTROLLED', 'no', HARD),
 	('BOOTPROTO', 'dhcp', BONDDHCP),
-	('DEVICE', 'name', BONDNM),
+	('DEVICE', 'id', BONDNM),
 	('TYPE', 'Bond', HARD),
 	('BONDING_MODULE_OPTS', '', BONDMODOPTS),
 	('BONDING_SLAVEx', '', BONDSLAVEX)
 )
+
+# Template for vlans
+IFCFG_VLAN_SUSE = (
+	('LLADDR', 'vlan_mac_address', MAND),
+#	('USERCONTROL', 'no', HARD),
+	('MTU', 'mtu', OPT),
+	('BOOTPROTO', 'dhcp', HARD),
+	('NAME', 'vlan_id', VLANNAME),
+	('TYPE', 'vlan', HARD),
+	('VLAN', 'yes', HARD),
+	('STARTMODE', 'auto', HARD),
+	('ETHERDEVICE', 'vlan_link', BONDNM)
+)
+
 
 # Template for ifcfg-eth* on RedHat
 IFCFG_PHY_REDHAT = (
@@ -171,7 +187,7 @@ IFCFG_BOND_REDHAT = (
 	('NM_CONTROLLED', 'yes', HARD),
 	('BOOTPROTO', 'dhcp', BONDDHCP),
 	('BONDING_OPTS', '', BONDMODOPTS),
-	('DEVICE', 'name', BONDNM),
+	('DEVICE', 'id', BONDNM),
 	('TYPE', 'Bond', HARD),
 )
 
@@ -196,10 +212,12 @@ if IS_SUSE:
 	IFCFG_PHY  = IFCFG_PHY_SUSE
 	IFCFG_BOND = IFCFG_BOND_SUSE
 	IFCFG_STAT = IFCFG_STATIC_SUSE
+	IFCFG_VLAN = IFCFG_VLAN_SUSE
 else:
 	IFCFG_PHY  = IFCFG_PHY_REDHAT
 	IFCFG_BOND = IFCFG_BOND_REDHAT
 	IFCFG_STAT = IFCFG_STATIC_REDHAT
+	IFCFG_VLAN = ()
 
 
 def maybedhcp(dev):
@@ -268,6 +286,10 @@ def bonddhcp(njson, sjson):
 		return "BOOTPROTO=dhcp\n"
 	return process_template(IFCFG_STAT, njson, njson, sjson)
 
+def vlanname(ljson):
+	"return vlanname"
+	# TODO: Error handling
+	return "vlan%s" % ljson["vlan_id"]
 
 def process_template(template, ljson, njson, sjson):
 	"Create ifcfg-* file from templates and json"
@@ -302,7 +324,7 @@ def process_template(template, ljson, njson, sjson):
 			out += bondslavex(ljson["bond_links"])
 		elif mode == BONDNM:
 			# TODO: Error handling
-			out += "%s=%s\n" % (key, bondnm(ljson["id"]))
+			out += "%s=%s\n" % (key, bondnm(ljson[val]))
 		elif mode == BONDMASTER:
 			master = bondmaster(ljson["name"])
 			if master:
@@ -312,6 +334,8 @@ def process_template(template, ljson, njson, sjson):
 			out += "%s" % bonddhcp(net, sjson)
 		elif mode == NAMESERVERS:
 			out += "%s" % nameservers(sjson)
+		elif mode == VLANNAME:
+			out += "%s=%s\n" % (key, vlanname(ljson))
 	return out
 
 
@@ -361,7 +385,21 @@ def get_network_json_hw():
 		umount("/mnt")
 		return ret, json
 
-def fix_name(ljson):
+def rename_if(old, new):
+	six.print_("Rename %s -> %s" % (old, new), file=sys.stderr)
+	#ljson["name"] = dev
+	cmd1 = "ip link set dev %s down" % old
+	cmd2 = "ip link set dev %s name %s" % (old, new)
+	#cmd3 = "ip link set dev %s up" % new
+	out = ""
+	try:
+		out = subprocess.check_output(cmd1.split(" "), stderr=subprocess.STDOUT)
+		out = subprocess.check_output(cmd2.split(" "), stderr=subprocess.STDOUT)
+	except:
+		six.print_("FAIL: %s" % out, file=sys.stderr)
+
+
+def fix_name(ljson, renameIF):
 	"Find real name of eth device with mac address and rename interface"
 	# Note: We could also rename the iface in json
 	nm = ljson["name"]
@@ -374,17 +412,10 @@ def fix_name(ljson):
 		try:
 			devmac = open("/sys/class/net/%s/address" % dev, "r").read().rstrip()
 			if devmac == mac:
-				six.print_("Rename %s -> %s" % (nm, dev), file=sys.stderr)
-				#ljson["name"] = dev
-				cmd1 = "ip link set dev %s down" % nm
-				cmd2 = "ip link set dev %s name %s" % (nm, dev)
-				cmd3 = "ip link set dev %s up" % dev
-				out = ""
-				try:
-					out = subprocess.check_output(cmd1.split(" "), stderr=subprocess.STDOUT)
-					out = subprocess.check_output(cmd2.split(" "), stderr=subprocess.STDOUT)
-				except:
-					six.print_("FAIL: %s" % out, file=sys.stderr)
+				if not renameIF:
+					ljson["name"] = dev
+				else:
+					rename_if(nm, dev)
 				return
 		except:
 			pass
@@ -426,9 +457,13 @@ def process_network_hw():
 		if ljson["type"] == "phy":
 			# FIXME: On RHEL, we need to find out the real name
 			if not IS_SUSE:
-				fix_name(ljson)
+				fix_name(ljson, True)
 			f = open("%s/ifcfg-%s" % (NETCONFPATH, ljson["name"]), "w")
 			six.print_(process_template(IFCFG_PHY, ljson, njson, sjson), file=f)
+		elif ljson["type"] == "vlan":
+			nm = vlanname(ljson)
+			f = open("%s/ifcfg-%s" % (NETCONFPATH, nm), "w")
+			six.print_(process_template(IFCFG_VLAN, ljson, njson, sjson), file=f)
 		elif ljson["type"] == "bond":
 			f = open("%s/ifcfg-%s" % (NETCONFPATH, bondnm(ljson["id"])), "w")
 			six.print_(process_template(IFCFG_BOND, ljson, njson, sjson), file=f)

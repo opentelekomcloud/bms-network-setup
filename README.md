@@ -72,9 +72,7 @@ network_data.json
       "ethernet_mac_address": "fa:16:3e:3f:15:55",
       "mtu": 8888,
       "bond_mode": "1",
-      "bond_links": [
-        "eth0",
-        "eth1" ],
+      "bond_links": [ "eth0", "eth1" ],
       "type": "bond",
       "id": "interface0"
     }, {
@@ -96,5 +94,7 @@ network_data.json
     } ]
 }
 ```
-This creates the ifcfg-eth0, -eth1 and -bond0 files that enslave the two ethX devices
-to do bonding (LACP aka 802.1ad) on bond0.
+bms-network-setup.py creates the ifcfg-eth0, -eth1, -bond0, -vlan2315, and -vlan3996 files.
+bond0 will enslave eth0 and eth1, creating an LACP (802.1ad) link.
+vlan2315 and vlan3996 are VLANs on this bond0 device, the former configured with DHCP
+while the latter has a static configuration.

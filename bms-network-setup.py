@@ -20,17 +20,24 @@ def usage():
 	six.print_("Usage: bms-network-setup.py [-d] [-s]", file=sys.stderr)
 	six.print_(" -d: Debug: reads network_data.json and writes ifcfg-* in current dir", file=sys.stderr)
 	six.print_(" -s: SuSE: assume we run on a SuSE distribution", file=sys.stderr)
+	six.print_(" -u: Debian: assume we run on a Debian/Ubuntu distribution", file=sys.stderr)
+	six.print_(" -r: REdHat: assume we run on a RedHat/CentOS distribution", file=sys.stderr)
 	sys.exit(1)
 
 # Global settings
 IS_SUSE = os.path.exists("/etc/SuSE-release")
+IS_DEB = os.path.exists("/etc/debian_release")
 DEBUG = 0
 # Arg parsing
 for arg in sys.argv[1:]:
 	if arg == "-d":
-		DEBUG = 1
+		DEBUG = True
 	elif arg == "-s":
-		IS_SUSE = 1
+		IS_SUSE = True; IS_DEB = False
+	elif arg == "-u":
+		IS_DEB = True; IS_SUSE = False
+	elif arg == "-r":
+		IS_DEB = False; IS_SUSE = False
 	else:
 		six.print_("UNKNOWN ARG %s" % arg, file=sys.stderr)
 		usage()
@@ -41,7 +48,9 @@ CONFDIR="."
 if not DEBUG:
 	WICKEDCONFPATH = "/etc/wicked/ifconfig/"
 	CONFDIR = "/etc"
-	if IS_SUSE:
+	if IS_DEB:
+		NETCONFPATH = "/etc/network/interfaces.d/60-"
+	elif IS_SUSE:
 		NETCONFPATH = "/etc/sysconfig/network/"
 	else:
 		NETCONFPATH = "/etc/sysconfig/network-scripts/"
@@ -117,6 +126,10 @@ BONDDHCP=8
 NAMESERVERS=9
 # special fn to compose vlan name vlan$ID
 VLANNAME=10
+# special fn to compose vlan name vlan$ID
+DEBNMMODE=11
+# deb bond slave list
+BONDSLAVES=12
 
 # Transformation rules
 # Template for ifcfg-eth* on SuSE
@@ -160,7 +173,13 @@ IFCFG_VLAN_SUSE = (
 	('ETHERDEVICE', 'vlan_link', BONDNM)
 )
 
-
+# Snippets for static address config
+IFCFG_STATIC_SUSE = (
+	('BOOTPROTO', 'static', HARD),
+	('IPADDR', 'ip_address', MAND),
+	('NETMASK', 'netmask', MAND),
+	('GATEWAY', 'gateway', OPT),
+)
 # Template for ifcfg-eth* on RedHat
 IFCFG_PHY_REDHAT = (
 #	('MACADDR', 'ethernet_mac_address', OPT),
@@ -204,15 +223,6 @@ IFCFG_VLAN_REDHAT = (
 	('PHYSDEV', 'vlan_link', BONDNM)
 )
 
-
-# Snippets for static address config
-IFCFG_STATIC_SUSE = (
-	('BOOTPROTO', 'static', HARD),
-	('IPADDR', 'ip_address', MAND),
-	('NETMASK', 'netmask', MAND),
-	('GATEWAY', 'gateway', OPT),
-)
-
 IFCFG_STATIC_REDHAT = (
 	('BOOTPROTO', 'none', HARD),	# static?
 	('IPADDR', 'ip_address', MAND),	# ADDRESS?
@@ -221,9 +231,48 @@ IFCFG_STATIC_REDHAT = (
 	('DNSx', '', NAMESERVERS),
 )
 
+
+# Template for interface cfg on Deb
+IFCFG_PHY_DEBIAN = (
+	('iface', 'name', DEBNMMODE),
+	('mtu', 'mut', OPT),
+	('hwaddress', 'ethernet_mac_address', OPT),
+	('address', 'no', MAYBEDHCP)
+)
+
+# Template for bond interface cfg on Deb
+IFCFG_BOND_DEBIAN = (
+	('iface', 'id', DEBNMMODE),
+	('mtu', 'mtu', OPT),
+	('hwaddress', 'ethernet_mac_address', OPT),
+	('address', 'no', BONDDHCP),
+	('bond-slaves', 'no', BONDSLAVES),
+	('bond-opts', 'no', BONDMODOPTS)
+)
+# Template for vlans
+IFCFG_VLAN_DEBIAN = (
+	('iface', 'name', DEBNMMODE),
+	('mtu', 'mut', OPT),
+	('hwaddress', 'vlan_mac_address', OPT),
+	('address', 'no', MAYBEDHCP)
+)
+
+IFCFG_STATIC_DEBIAN = (
+	('address', 'ip_address', MAND),
+	('netmask', 'netmask', MAND),
+	('gateway', 'gateway', OPT)
+)
+
+SFMT = "%s=%s\n"
 #TODO: Check for other well-defined parameters (cloud-init? OpenStack standards)
 
-if IS_SUSE:
+if IS_DEB:
+	IFCFG_PHY  = IFCFG_PHY_DEBIAN
+	IFCFG_BOND = IFCFG_BOND_DEBIAN
+	IFCFG_STAT = IFCFG_STATIC_DEBIAN
+	IFCFG_VLAN = IFCFG_VLAN_DEBIAN
+	SFMT = "\t%s %s\n"
+elif IS_SUSE:
 	IFCFG_PHY  = IFCFG_PHY_SUSE
 	IFCFG_BOND = IFCFG_BOND_SUSE
 	IFCFG_STAT = IFCFG_STATIC_SUSE
@@ -243,11 +292,21 @@ def maybedhcp(dev):
 	else:
 		return "dhcp"
 
-BOND_TPL_OPTS = tuple([
-	('bond_mode', "mode=%s"),
-	('bond_xmit_hash_policy', "xmit_hash_policy=%s"),
-	('bond_miimon', "miimon=%s"),
-])
+if IS_DEB:
+	BOND_TPL_OPTS = tuple([
+		('bond_mode', "bond-mode %s"),
+		('bond_xmit_hash_policy', "bond-xmit-hash-policy %s"),
+		('bond_miimon', "bond-miimon %s"),
+	])
+	BSEP='\n\t'
+else:
+	BOND_TPL_OPTS = tuple([
+		('bond_mode', "mode=%s"),
+		('bond_xmit_hash_policy', "xmit_hash_policy=%s"),
+		('bond_miimon', "miimon=%s"),
+	])
+	BSEP=' '
+
 def bondmodopts(bjson):
 	"transform json settings to bond module parameters"
 	modpar=''
@@ -255,11 +314,14 @@ def bondmodopts(bjson):
 		try:
 			val = bjson[jopt]
 			if modpar:
-				modpar += " "
+				modpar += BSEP
 			modpar += mopt % val
 		except:
 			pass
-	return '"%s"' % modpar
+	if IS_DEB:
+		return modpar
+	else:
+		return '"%s"' % modpar
 
 def bondslavex(btpl):
 	"output BONDING_SLAVEn=... lines (SUSE)"
@@ -324,36 +386,47 @@ def process_template(template, ljson, njson, sjson, note = True):
 	#six.print_("Device ID %s: network %s" % (link, net))
 	for key, val, mode in template:
 		if mode == HARD:
-			out += "%s=%s\n" % (key, val)
+			out += SFMT % (key, val)
 		elif mode == OPT or mode == MAND:
 			try:
 				jval = ljson[val]
-				out += "%s=%s\n" % (key, jval)
+				out += SFMT % (key, jval)
 			except:
 				if mode == MAND:
 					LOG.error("Mandatory value %s not found for %s setting" % (val, key))
 		elif mode == MAYBEDHCP:
 			# TODO: Error handling
-			out += "%s=%s\n" % (key, maybedhcp(ljson["name"]))
+			out += SFMT % (key, maybedhcp(ljson["name"]))
 		elif mode == BONDMODOPTS:
-			out += "%s=%s\n" % (key, bondmodopts(ljson))
+			if IS_DEB:
+				out += '\t' + bondmodopts(ljson)
+			else:
+				out += SFMT % (key, bondmodopts(ljson))
 		elif mode == BONDSLAVEX:
 			# TODO: Error handling
 			out += bondslavex(ljson["bond_links"])
 		elif mode == BONDNM:
 			# TODO: Error handling
-			out += "%s=%s\n" % (key, bondnm(ljson[val]))
+			out += SFMT % (key, bondnm(ljson[val]))
 		elif mode == BONDMASTER:
 			master = bondmaster(ljson["name"])
 			if master:
-				out += "%s=%s\n" % (key, master)
+				out += SFMT % (key, master)
 				out += "SLAVE=yes\n"
 		elif mode == BONDDHCP:
 			out += "%s" % bonddhcp(net, sjson)
 		elif mode == NAMESERVERS:
 			out += "%s" % nameservers(sjson)
 		elif mode == VLANNAME:
-			out += "%s=%s\n" % (key, vlanname(ljson))
+			out += SFMT % (key, vlanname(ljson))
+		elif mode == VLANNAME:
+			out += SFMT % (key, vlanname(ljson))
+		elif mode == DEBNMMODE:
+			out += SFMT % (key, maybedhcp(ljson["id"]))
+		elif mode == BONDSLAVES:
+			out == "\t%s %s\n\tbond-primary %s" % (key, ljson["bond_links"], ljson["bond_links"][0])
+		else:
+			LOG.error("Unsupported template %i for %s/%s" % (mode, key, val))
 	return out
 
 
@@ -474,7 +547,7 @@ def process_network_hw():
 	#six.print_(network_json)
 	for ljson in network_json["links"]:
 		if ljson["type"] == "phy":
-			# FIXME: On RHEL, we need to find out the real name
+			# FIXME: On RHEL and DEB, we need to find out the real name
 			if not IS_SUSE:
 				fix_name(ljson, True)
 			f = open("%s/ifcfg-%s" % (NETCONFPATH, ljson["name"]), "w")

@@ -385,7 +385,7 @@ def read_json(path):
 
 def get_network_json_hw():
 	"read json from config drive if possible"
-	if (len(sys.argv) > 1 and sys.argv[1] == "-d"):
+	if DEBUG:
 		return read_json("network_data.json")
 	labelpath = "/dev/disk/by-label/%s" % LABEL
 	if not os.path.exists(labelpath):

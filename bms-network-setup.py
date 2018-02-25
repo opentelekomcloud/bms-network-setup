@@ -21,7 +21,7 @@ def usage():
 	six.print_(" -d: Debug: reads network_data.json and writes ifcfg-* in current dir", file=sys.stderr)
 	six.print_(" -s: SuSE: assume we run on a SuSE distribution", file=sys.stderr)
 	six.print_(" -u: Debian: assume we run on a Debian/Ubuntu distribution", file=sys.stderr)
-	six.print_(" -r: REdHat: assume we run on a RedHat/CentOS distribution", file=sys.stderr)
+	six.print_(" -r: RedHat: assume we run on a RedHat/CentOS distribution", file=sys.stderr)
 	sys.exit(1)
 
 # Global settings
@@ -49,7 +49,7 @@ if not DEBUG:
 	WICKEDCONFPATH = "/etc/wicked/ifconfig/"
 	CONFDIR = "/etc"
 	if IS_DEB:
-		NETCONFPATH = "/etc/network/interfaces.d/60-"
+		NETCONFPATH = "/etc/network/interfaces.d/"
 	elif IS_SUSE:
 		NETCONFPATH = "/etc/sysconfig/network/"
 	else:
@@ -253,13 +253,15 @@ IFCFG_VLAN_DEBIAN = (
 	('iface', 'name', DEBNMMODE),
 	('mtu', 'mtu', OPT),
 	('hwaddress', 'vlan_mac_address', OPT),
-#	('address', 'no', MAYBEDHCP)
+#	('address', 'no', MAYBEDHCP),
+	('vlan_raw_device', 'vlan_link', BONDNM)
 )
 
 IFCFG_STATIC_DEBIAN = (
 	('address', 'ip_address', MAND),
 	('netmask', 'netmask', MAND),
-	('gateway', 'gateway', OPT)
+	('gateway', 'gateway', OPT),
+	('dns-nameservers', '', NAMESERVERS)
 )
 
 SFMT = "%s=%s\n"
@@ -353,9 +355,15 @@ def nameservers(sjson):
 	for svc in sjson:
 		if svc["type"] == "dns":
 			dns += 1
-			out += "DNS%i=%s\n" % (dns, svc["address"])
+			if IS_DEB:
+				out += " " + svc["address"]
+			else:
+				out += "DNS%i=%s\n" % (dns, svc["address"])
 	if dns > 0:
-		out += "PEERDNS=yes\n"
+		if not IS_DEB:
+			out += "PEERDNS=yes\n"
+		else:
+			out = "\tdns-nameservers%s\n" % out
 	return out
 
 def bonddhcp(njson, sjson):
@@ -370,9 +378,26 @@ def vlanname(ljson):
 	# TODO: Error handling
 	return "vlan%s" % ljson["vlan_id"]
 
+def ifname(ljson):
+	"return iface name"
+	tp = ljson["type"]
+	if tp == "bond":
+		return bondnm(ljson["id"])
+	elif tp == "vlan":
+		return vlanname(ljson)
+	else:
+		return ljson["id"]
+
+def splist(ljson):
+	"output space separated list"
+	out =""
+	for el in ljson:
+		out += str(el) + " "
+	return out
+
 def debiface(ljson, njson, sjson):
 	"generate interface first line incl. static network config if needed"
-	nm = bondnm(ljson["id"])
+	nm = ifname(ljson)
 	if nm in bond_slaves:
 		return "auto %s\niface %s inet manual\n\tbond-master %s\n" % \
 			(nm, nm, bondmaster(nm))
@@ -413,7 +438,7 @@ def process_template(template, ljson, njson, sjson, note = True):
 			out += SFMT % (key, maybedhcp(ljson["name"]))
 		elif mode == BONDMODOPTS:
 			if IS_DEB:
-				out += '\t' + bondmodopts(ljson)
+				out += '\t' + bondmodopts(ljson) + '\n'
 			else:
 				out += SFMT % (key, bondmodopts(ljson))
 		elif mode == BONDSLAVEX:
@@ -438,7 +463,8 @@ def process_template(template, ljson, njson, sjson, note = True):
 		elif mode == DEBNMMODE:
 			out += debiface(ljson, net, sjson)
 		elif mode == BONDSLAVES:
-			out == "\t%s %s\n\tbond-primary %s" % (key, ljson["bond_links"], ljson["bond_links"][0])
+			out += "\t%s %s\n\tbond-primary %s\n" % (key, splist(ljson["bond_links"]), 
+				ljson["bond_links"][0])
 		else:
 			LOG.error("Unsupported template %i for %s/%s" % (mode, key, val))
 	return out
@@ -560,19 +586,24 @@ def process_network_hw():
 	open("%s/is_bms" % CONFDIR, "w")
 	#six.print_(network_json)
 	for ljson in network_json["links"]:
-		if ljson["type"] == "phy":
-			# FIXME: On RHEL and DEB, we need to find out the real name
-			if not IS_SUSE:
-				fix_name(ljson, True)
-			f = open("%s/ifcfg-%s" % (NETCONFPATH, ljson["name"]), "w")
-			six.print_(process_template(IFCFG_PHY, ljson, njson, sjson), file=f)
-		elif ljson["type"] == "vlan":
-			nm = vlanname(ljson)
-			f = open("%s/ifcfg-%s" % (NETCONFPATH, nm), "w")
-			six.print_(process_template(IFCFG_VLAN, ljson, njson, sjson), file=f)
-		elif ljson["type"] == "bond":
-			f = open("%s/ifcfg-%s" % (NETCONFPATH, bondnm(ljson["id"])), "w")
-			six.print_(process_template(IFCFG_BOND, ljson, njson, sjson), file=f)
+		tp = ljson["type"]
+		if tp == "phy" and not IS_SUSE:
+			fix_name(ljson, True)
+		nm = ifname(ljson)
+		if tp == "phy":
+			IFCFG_TMPL = IFCFG_PHY
+			PRE = "60-" if IS_DEB else ""
+		elif tp == "bond":
+			IFCFG_TMPL = IFCFG_BOND
+			PRE = "61-" if IS_DEB else ""
+		elif tp == "vlan":
+			IFCFG_TMPL = IFCFG_VLAN
+			PRE = "62-" if IS_DEB else ""
+		else:
+			six.print_("Unknown network type %s" % tp, file=sys.stderr)
+
+		f = open("%s/%sifcfg-%s" % (NETCONFPATH, PRE, nm), "w")
+		six.print_(process_template(IFCFG_TMPL, ljson, njson, sjson), file=f)
 
 # Entry point
 if __name__ == "__main__":

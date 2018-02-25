@@ -26,7 +26,7 @@ def usage():
 
 # Global settings
 IS_SUSE = os.path.exists("/etc/SuSE-release")
-IS_DEB = os.path.exists("/etc/debian_release")
+IS_DEB = os.path.exists("/etc/debian_version")
 DEBUG = 0
 # Arg parsing
 for arg in sys.argv[1:]:

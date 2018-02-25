@@ -235,9 +235,9 @@ IFCFG_STATIC_REDHAT = (
 # Template for interface cfg on Deb
 IFCFG_PHY_DEBIAN = (
 	('iface', 'name', DEBNMMODE),
-	('mtu', 'mut', OPT),
+	('mtu', 'mtu', OPT),
 	('hwaddress', 'ethernet_mac_address', OPT),
-	('address', 'no', MAYBEDHCP)
+#	('address', 'no', MAYBEDHCP)
 )
 
 # Template for bond interface cfg on Deb
@@ -251,9 +251,9 @@ IFCFG_BOND_DEBIAN = (
 # Template for vlans
 IFCFG_VLAN_DEBIAN = (
 	('iface', 'name', DEBNMMODE),
-	('mtu', 'mut', OPT),
+	('mtu', 'mtu', OPT),
 	('hwaddress', 'vlan_mac_address', OPT),
-	('address', 'no', MAYBEDHCP)
+#	('address', 'no', MAYBEDHCP)
 )
 
 IFCFG_STATIC_DEBIAN = (
@@ -373,11 +373,14 @@ def vlanname(ljson):
 def debiface(ljson, njson, sjson):
 	"generate interface first line incl. static network config if needed"
 	nm = bondnm(ljson["id"])
-	if njson and njson["type"] and njson["type"][-4:] == "dhcp":
-		return "iface %s inet dhcp\n" % nm
+	if nm in bond_slaves:
+		return "auto %s\niface %s inet manual\n\tbond-master %s\n" % \
+			(nm, nm, bondmaster(nm))
+	elif njson and njson["type"] and njson["type"][-4:] == "dhcp":
+		return "auto %s\niface %s inet dhcp\n" % (nm, nm)
 	else:
-		return "iface %s inet static\n%s" % \
-			(nm, process_template(IFCFG_STAT, njson, njson, sjson, False))
+		return "auto %s\niface %s inet static\n%s" % \
+			(nm, nm, process_template(IFCFG_STAT, njson, njson, sjson, False))
 
 def process_template(template, ljson, njson, sjson, note = True):
 	"Create ifcfg-* file from templates and json"

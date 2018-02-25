@@ -245,7 +245,6 @@ IFCFG_BOND_DEBIAN = (
 	('iface', 'id', DEBNMMODE),
 	('mtu', 'mtu', OPT),
 	('hwaddress', 'ethernet_mac_address', OPT),
-	('address', 'no', BONDDHCP),
 	('bond-slaves', 'no', BONDSLAVES),
 	('bond-opts', 'no', BONDMODOPTS)
 )
@@ -334,7 +333,10 @@ def bondslavex(btpl):
 
 def bondnm(iface):
 	"derive bondN name from interfaceN string"
-	return "bond%s" % iface[9:]
+	if iface[:9] == "interface":
+		return "bond%s" % iface[9:]
+	else:
+		return iface
 
 def bondmaster(dev):
 	"Find bond master from slave device name"
@@ -367,6 +369,15 @@ def vlanname(ljson):
 	"return vlanNNN name"
 	# TODO: Error handling
 	return "vlan%s" % ljson["vlan_id"]
+
+def debiface(ljson, njson, sjson):
+	"generate interface first line incl. static network config if needed"
+	nm = bondnm(ljson["id"])
+	if njson and njson["type"] and njson["type"][-4:] == "dhcp":
+		return "iface %s inet dhcp\n" % nm
+	else:
+		return "iface %s inet static\n%s" % \
+			(nm, process_template(IFCFG_STAT, njson, njson, sjson, False))
 
 def process_template(template, ljson, njson, sjson, note = True):
 	"Create ifcfg-* file from templates and json"
@@ -422,7 +433,7 @@ def process_template(template, ljson, njson, sjson, note = True):
 		elif mode == VLANNAME:
 			out += SFMT % (key, vlanname(ljson))
 		elif mode == DEBNMMODE:
-			out += SFMT % (key, maybedhcp(ljson["id"]))
+			out += debiface(ljson, net, sjson)
 		elif mode == BONDSLAVES:
 			out == "\t%s %s\n\tbond-primary %s" % (key, ljson["bond_links"], ljson["bond_links"][0])
 		else:

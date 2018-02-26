@@ -15,10 +15,16 @@ in [home:garloff:OTC](https://build.opensuse.org/package/show/home:garloff:OTC/b
 we also have the mechanism to dynamically disable the
 ConfigDrive data source IF running on an OTC BMS.
 
-## Other options
+## Parameters
+
+## Alternatives
 This is a different approach from [bms-network-config](https://github.com/bms-network/bms-network-config).
 bms-network-config does a lot more and duplicates some of the things that cloud-init and the
 distro network setup scripts/NM/wickedd do.
+
+cloud-init does have support to parse network_data.json -- just not complete enough to support
+Bare Metal instances in OTC. Medium term, having cloud-init enhanced to do the job would be
+the preferred option.
 
 ## Examples
 network_data.json
@@ -95,6 +101,6 @@ network_data.json
 }
 ```
 bms-network-setup.py creates the ifcfg-eth0, -eth1, -bond0, -vlan2315, and -vlan3996 files.
-bond0 will enslave eth0 and eth1, creating an LACP (802.1ad) link.
+bond0 will enslave eth0 and eth1, creating an bond link (mode1 => active/passive).
 vlan2315 and vlan3996 are VLANs on this bond0 device, the former configured with DHCP
 while the latter has a static configuration.

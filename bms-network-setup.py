@@ -236,7 +236,7 @@ IFCFG_STATIC_REDHAT = (
 IFCFG_PHY_DEBIAN = (
 	('iface', 'name', DEBNMMODE),
 	('mtu', 'mtu', OPT),
-	('hwaddress', 'ethernet_mac_address', OPT),
+#	('hwaddress', 'ethernet_mac_address', OPT),
 #	('address', 'no', MAYBEDHCP)
 )
 

@@ -15,7 +15,20 @@ in [home:garloff:OTC](https://build.opensuse.org/package/show/home:garloff:OTC/b
 we also have the mechanism to dynamically disable the
 ConfigDrive data source IF running on an OTC BMS.
 
+The script can produce network interface config files for modern SUSE, RedHat and Debian based
+Linux distributions.
+
 ## Parameters
+
+```
+Usage: bms-network-setup.py [-d] [-s|u|r]
+ -d: Debug: reads network_data.json and writes ifcfg-* in current dir
+ -s: SuSE: assume we run on a SuSE distribution
+ -u: Debian: assume we run on a Debian/Ubuntu distribution
+ -r: RedHat: assume we run on a RedHat/CentOS distribution
+```
+By default, the script produces ifcfg files for the distribution it detects
+it's currently running on.
 
 ## Alternatives
 This is a different approach from [bms-network-config](https://github.com/bms-network/bms-network-config).

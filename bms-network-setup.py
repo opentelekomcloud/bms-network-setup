@@ -545,7 +545,7 @@ def fix_name(ljson, renameIF = True):
 			devmac = open("/sys/class/net/%s/address" % dev, "r").read().rstrip()
 			if devmac == mac:
 				if renameIF:
-					rename_if(nm, dev)
+					rename_if(dev, nm)
 				else:
 					ljson["name"] = dev
 				return

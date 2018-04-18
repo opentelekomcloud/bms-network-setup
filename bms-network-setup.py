@@ -25,19 +25,20 @@ def usage():
 	sys.exit(1)
 
 # Global settings
-IS_SUSE = os.path.exists("/etc/SuSE-release")
-IS_DEB = os.path.exists("/etc/debian_version")
+IS_SUSE  = os.path.exists("/etc/SuSE-release")
+IS_EULER = os.path.exists("/etc/euleros-release")
+IS_DEB   = os.path.exists("/etc/debian_version")
 DEBUG = 0
 # Arg parsing
 for arg in sys.argv[1:]:
 	if arg == "-d":
 		DEBUG = True
 	elif arg == "-s":
-		IS_SUSE = True; IS_DEB = False
+		IS_SUSE = True; IS_DEB = False; IS_EULER = False
 	elif arg == "-u":
-		IS_DEB = True; IS_SUSE = False
+		IS_DEB = True; IS_SUSE = False; IS_EULER = False
 	elif arg == "-r":
-		IS_DEB = False; IS_SUSE = False
+		IS_DEB = False; IS_SUSE = False; IS_EULER = False
 	else:
 		six.print_("UNKNOWN ARG %s" % arg, file=sys.stderr)
 		usage()
@@ -587,8 +588,11 @@ def process_network_hw():
 	#six.print_(network_json)
 	for ljson in network_json["links"]:
 		tp = ljson["type"]
-		if tp == "phy" and not IS_SUSE:
-			fix_name(ljson, True)
+		if tp == "phy":
+			if not IS_SUSE and not IS_EULER:
+				fix_name(ljson, True)
+			else:
+				fix_name(ljson, False)
 		nm = ifname(ljson)
 		if tp == "phy":
 			IFCFG_TMPL = IFCFG_PHY

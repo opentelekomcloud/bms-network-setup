@@ -523,7 +523,7 @@ def get_network_json_hw():
 		return ret, json
 
 def rename_if(old, new):
-	# Change name of network interface using ip link set dev name
+	"Change name of network interface using ip link set dev name"
 	six.print_("Rename %s -> %s" % (old, new), file=sys.stderr)
 	#ljson["name"] = dev
 	cmd1 = "ip link set dev %s down" % old
@@ -538,6 +538,7 @@ def rename_if(old, new):
 
 
 def find_name(mac):
+	"Find NIC name with MAC or phys_port_id mac"
 	shortmac = mac.replace(':','')
 	for dev in os.listdir("/sys/class/net/"):
 		try:
@@ -551,26 +552,10 @@ def find_name(mac):
 			pass
 	return None
 
-def fix_name(ljson, renameIF = True):
-	"""Find real name of eth device with mac address and rename interface
-	   If renameIF is not set, we will change the name in JSON instead."""
-	nm = ljson["name"]
-	mac = ljson["ethernet_mac_address"]
-	if os.access("/sys/class/net/%s/address" % nm, os.R_OK):
-		devmac = open("/sys/class/net/%s/address" % nm, "r").read().rstrip()
-		if devmac == mac:
-			return
-	dev = find_name(mac)
-	if dev:
-		if renameIF:
-			rename_if(dev, nm)
-		else:
-			ljson["name"] = dev
-	else:
-		six.print_("WARN: No NIC with MAC %s found" % mac, file=sys.stderr)
-
-
 def rename_ifaces(ljson, hwrename=True):
+	"""Find real names of eth devices with mac address and rename interfaces
+	   If hwrename is not set, we will change the name in JSON instead.
+	   For convenience we return the (potentially fixed up) link array with bond type."""
 	bondjson = []
 	renames = []
 	for link in ljson:

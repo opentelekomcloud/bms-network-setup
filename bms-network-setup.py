@@ -538,10 +538,14 @@ def rename_if(old, new):
 
 
 def find_name(mac):
+	shortmac = mac.replace(':','')
 	for dev in os.listdir("/sys/class/net/"):
 		try:
 			devmac = open("/sys/class/net/%s/address" % dev, "r").read().rstrip()
 			if devmac == mac:
+				return dev
+			portid = open("/sys/class/net/%s/phys_port_id" % dev, "r").read().rstrip()
+			if shortmac == portid:
 				return dev
 		except:
 			pass
@@ -572,17 +576,21 @@ def rename_ifaces(ljson, hwrename=True):
 	for link in ljson:
 		if link["type"] == "phy":
 			dev = find_name(link["ethernet_mac_address"])
+			six.print_("Dev %s: %s->%s" % (link["ethernet_mac_address"], link["name"], dev))
 			if dev and dev != link["name"]:
 				if hwrename:
 					rename_if(dev, nm)
 				else:
 					renames.append((link["name"], dev),)
 					link["name"] = dev
+					link["id"] = dev
 		if link["type"] == "bond":
 			bondjson.append(link)
 	if not bondjson:
 		six.print_("No BMS bond devices configured, exiting", file=sys.stderr)
 		sys.exit(0)
+
+	#six.print_("Renames: %s" % renames)
 	if not renames:
 		return bondjson
 	for bj in bondjson:

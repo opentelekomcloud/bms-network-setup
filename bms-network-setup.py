@@ -135,8 +135,8 @@ BONDSLAVES=12
 # Transformation rules
 # Template for ifcfg-eth* on SuSE
 IFCFG_PHY_SUSE = (
-	('LLADDR', 'ethernet_mac_address', OPT),
-#	 ('USERCONTROL', 'no', HARD),
+	('#LLADDR', 'ethernet_mac_address', OPT),
+#	('USERCONTROL', 'no', HARD),
 	('MTU', 'mtu', OPT),
 	('STARTMODE', 'auto', HARD),
 	('NM_CONTROLLED', 'no', HARD),

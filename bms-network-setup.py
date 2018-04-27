@@ -560,13 +560,14 @@ def rename_ifaces(ljson, hwrename=True):
 	renames = []
 	for link in ljson:
 		if link["type"] == "phy":
+			nm = link["name"]
 			dev = find_name(link["ethernet_mac_address"])
-			six.print_("Dev %s: %s->%s" % (link["ethernet_mac_address"], link["name"], dev))
-			if dev and dev != link["name"]:
+			six.print_("Dev %s: %s->%s" % (link["ethernet_mac_address"], nm, dev))
+			if dev and dev != nm:
 				if hwrename:
 					rename_if(dev, nm)
 				else:
-					renames.append((link["name"], dev),)
+					renames.append((nm, dev),)
 					link["name"] = dev
 					link["id"] = dev
 		if link["type"] == "bond":
@@ -602,6 +603,7 @@ def process_network_hw():
 			pass
 		six.print_("Not running on BMS, exiting", file=sys.stderr)
 		sys.exit(0)
+	# TODO: Do hwrename if names are not eth* rather than hardcoding SUSE and Euler.
 	bjson = rename_ifaces(network_json["links"], not(IS_SUSE or IS_EULER))
 	for bj in bjson:
 		bond_slaves += bj["bond_links"]

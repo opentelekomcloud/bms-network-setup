@@ -367,10 +367,15 @@ def nameservers(sjson):
 			out = "\tdns-nameservers%s\n" % out
 	return out
 
+FIRST = True
 def bonddhcp(njson, sjson):
 	"BOOTPROTO=dhcp or static config from network settings"
+	global FIRST
 	#six.print_(njson)
 	if njson["type"][-4:] == "dhcp":
+		if IS_SUSE and njson.has_key("gateway") and FIRST:
+			FIRST = False
+			return "BOOTPROTO=dhcp\nDHCLIENT_PRIMARY_DEVICE=yes\n"
 		return "BOOTPROTO=dhcp\n"
 	return process_template(IFCFG_STAT, njson, njson, sjson, False)
 

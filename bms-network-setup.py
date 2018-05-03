@@ -373,7 +373,7 @@ def bonddhcp(njson, sjson):
 	global FIRST
 	#six.print_(njson)
 	if njson["type"][-4:] == "dhcp":
-		if IS_SUSE and njson.has_key("gateway") and FIRST:
+		if IS_SUSE and "gateway" in njson and FIRST:
 			FIRST = False
 			return "BOOTPROTO=dhcp\nDHCLIENT_PRIMARY_DEVICE=yes\n"
 		return "BOOTPROTO=dhcp\n"

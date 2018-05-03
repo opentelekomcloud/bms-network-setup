@@ -135,7 +135,7 @@ BONDSLAVES=12
 # Transformation rules
 # Template for ifcfg-eth* on SuSE
 IFCFG_PHY_SUSE = (
-	('#LLADDR', 'ethernet_mac_address', OPT),
+	('#HWADDR', 'ethernet_mac_address', OPT),
 #	('USERCONTROL', 'no', HARD),
 	('MTU', 'mtu', OPT),
 	('STARTMODE', 'auto', HARD),
@@ -150,7 +150,7 @@ IFCFG_PHY_SUSE = (
 IFCFG_BOND_SUSE = (
 	('LLADDR', 'ethernet_mac_address', OPT),
 #	('USERCONTROL', 'no', HARD),
-#	('MTU', 'mtu', OPT),
+	('#MTU', 'mtu', OPT),
 	('BONDING_MASTER', 'yes', HARD),
 	('STARTMODE', 'auto', HARD),
 	('NM_CONTROLLED', 'no', HARD),
@@ -183,7 +183,6 @@ IFCFG_STATIC_SUSE = (
 )
 # Template for ifcfg-eth* on RedHat
 IFCFG_PHY_REDHAT = (
-#	('MACADDR', 'ethernet_mac_address', OPT),
 	('HWADDR', 'ethernet_mac_address', OPT),
 	('USERCTL', 'no', HARD),
 	('MTU', 'mtu', OPT),
@@ -199,9 +198,8 @@ IFCFG_PHY_REDHAT = (
 # Template for ifcfg-bond* on RedHat
 IFCFG_BOND_REDHAT = (
 	('MACADDR', 'ethernet_mac_address', OPT),
-#	('HWADDR', 'ethernet_mac_address', OPT),
 	('USERCTL', 'no', HARD),
-#	('MTU', 'mtu', OPT),
+	('#MTU', 'mtu', OPT),
 	('BONDING_MASTER', 'yes', HARD),
 	('ONBOOT', 'yes', HARD),
 	('NM_CONTROLLED', 'yes', HARD),

@@ -28,6 +28,7 @@ def usage():
 IS_SUSE  = os.path.exists("/etc/SuSE-release")
 IS_EULER = os.path.exists("/etc/euleros-release")
 IS_DEB   = os.path.exists("/etc/debian_version")
+IS_NETPLAN = os.path.exists("/etc/netplan")
 DEBUG = 0
 # Arg parsing
 for arg in sys.argv[1:]:
@@ -49,7 +50,9 @@ CONFDIR="."
 if not DEBUG:
 	WICKEDCONFPATH = "/etc/wicked/ifconfig/"
 	CONFDIR = "/etc"
-	if IS_DEB:
+	if IS_NETPLAN:
+		NETCONFPATH = "/etc/netplan/"
+	elif IS_DEB:
 		NETCONFPATH = "/etc/network/interfaces.d/"
 	elif IS_SUSE:
 		NETCONFPATH = "/etc/sysconfig/network/"
@@ -631,16 +634,19 @@ def process_network_hw():
 		if tp == "phy":
 			IFCFG_TMPL = IFCFG_PHY
 			PRE = "60-" if IS_DEB else ""
+                        POST = ".yaml" if IS_NETPLAN else ""
 		elif tp == "bond":
 			IFCFG_TMPL = IFCFG_BOND
 			PRE = "61-" if IS_DEB else ""
+                        POST = ".yaml" if IS_NETPLAN else ""
 		elif tp == "vlan":
 			IFCFG_TMPL = IFCFG_VLAN
 			PRE = "62-" if IS_DEB else ""
+                        POST = ".yaml" if IS_NETPLAN else ""
 		else:
 			six.print_("Unknown network type %s" % tp, file=sys.stderr)
 
-		f = open("%s/%sifcfg-%s" % (NETCONFPATH, PRE, nm), "w")
+		f = open("%s/%sifcfg-%s%s" % (NETCONFPATH, PRE, nm, POST), "w")
 		six.print_(process_template(IFCFG_TMPL, ljson, njson, sjson, True), file=f)
 
 # Entry point

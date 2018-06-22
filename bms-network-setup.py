@@ -132,6 +132,8 @@ NAMESERVERS=9
 VLANNAME=10
 # special fn to compose vlan name vlan$ID
 DEBNMMODE=11
+# netplan
+NETPLMODE=13
 # deb bond slave list
 BONDSLAVES=12
 
@@ -235,6 +237,14 @@ IFCFG_STATIC_REDHAT = (
 
 
 # Template for interface cfg on Deb
+IFCFG_PHY_NETPLAN = (
+	('iface', 'name', NETPLMODE),
+#	('mtu', 'mtu', OPT),
+#	('hwaddress', 'ethernet_mac_address', OPT),
+#	('address', 'no', MAYBEDHCP)
+)
+
+# Template for interface cfg on Deb
 IFCFG_PHY_DEBIAN = (
 	('iface', 'name', DEBNMMODE),
 	('mtu', 'mtu', OPT),
@@ -269,7 +279,12 @@ IFCFG_STATIC_DEBIAN = (
 SFMT = "%s=%s\n"
 #TODO: Check for other well-defined parameters (cloud-init? OpenStack standards)
 
-if IS_DEB:
+if IS_NETPLAN:
+	IFCFG_PHY  = IFCFG_PHY_NETPLAN
+	IFCFG_BOND = IFCFG_BOND_DEBIAN
+	IFCFG_STAT = IFCFG_STATIC_DEBIAN
+	IFCFG_VLAN = IFCFG_VLAN_DEBIAN
+elif IS_DEB:
 	IFCFG_PHY  = IFCFG_PHY_DEBIAN
 	IFCFG_BOND = IFCFG_BOND_DEBIAN
 	IFCFG_STAT = IFCFG_STATIC_DEBIAN
@@ -414,6 +429,16 @@ def debiface(ljson, njson, sjson):
 		return "auto %s\niface %s inet static\n%s" % \
 			(nm, nm, process_template(IFCFG_STAT, njson, njson, sjson, False))
 
+def netpliface(ljson, njson, sjson):
+	"generate interface yaml layout, incl. static network config if needed"
+	nm = ifname(ljson)
+	mtu = ljson["mtu"]
+	mac = ljson["ethernet_mac_address"]
+	# if nm in bond_slaves:
+        return "network:\n  version: 2\n  ethernets:\n    %s:\n      match:\n        macaddress: %s\n      mtu: %s\n      set-name: %s" % \
+	    (nm, mac, mtu, nm)
+
+
 def process_template(template, ljson, njson, sjson, note = True):
 	"Create ifcfg-* file from templates and json"
 	out = ''
@@ -434,6 +459,7 @@ def process_template(template, ljson, njson, sjson, note = True):
 				break
 	except:
 		pass
+        
 	#six.print_("Device ID %s: network %s" % (link, net))
 	for key, val, mode in template:
 		if mode == HARD:
@@ -474,6 +500,8 @@ def process_template(template, ljson, njson, sjson, note = True):
 			out += SFMT % (key, vlanname(ljson))
 		elif mode == DEBNMMODE:
 			out += debiface(ljson, net, sjson)
+		elif mode == NETPLMODE:
+			out += netpliface(ljson, net, sjson)
 		elif mode == BONDSLAVES:
 			out += "\t%s %s\n\tbond-primary %s\n" % (key, splist(ljson["bond_links"]), 
 				ljson["bond_links"][0])

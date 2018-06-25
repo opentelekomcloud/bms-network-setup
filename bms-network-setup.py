@@ -239,7 +239,7 @@ IFCFG_STATIC_REDHAT = (
 # Template for interface cfg on Deb
 IFCFG_PHY_NETPLAN = (
 	('iface', 'name', NETPLMODE),
-#	('mtu', 'mtu', OPT),
+	('mtu', 'mtu', OPT),
 #	('hwaddress', 'ethernet_mac_address', OPT),
 #	('address', 'no', MAYBEDHCP)
 )
@@ -259,6 +259,13 @@ IFCFG_BOND_DEBIAN = (
 	('hwaddress', 'ethernet_mac_address', OPT),
 	('bond-slaves', 'no', BONDSLAVES),
 	('bond-opts', 'no', BONDMODOPTS)
+)
+# Template for bond interface cfg on NETPLAN
+IFCFG_BOND_NETPLAN = (
+	('iface', 'id', NETPLMODE),
+	('mtu', 'mtu', OPT),
+	('macaddress', 'ethernet_mac_address', OPT),
+	('mii-monitor-interval', 'bond-miimon', BONDMODOPTS)
 )
 # Template for vlans
 IFCFG_VLAN_DEBIAN = (
@@ -281,9 +288,10 @@ SFMT = "%s=%s\n"
 
 if IS_NETPLAN:
 	IFCFG_PHY  = IFCFG_PHY_NETPLAN
-	IFCFG_BOND = IFCFG_BOND_DEBIAN
+	IFCFG_BOND = IFCFG_BOND_NETPLAN
 	IFCFG_STAT = IFCFG_STATIC_DEBIAN
 	IFCFG_VLAN = IFCFG_VLAN_DEBIAN
+        SFMT = "      %s: %s\n"
 elif IS_DEB:
 	IFCFG_PHY  = IFCFG_PHY_DEBIAN
 	IFCFG_BOND = IFCFG_BOND_DEBIAN
@@ -310,7 +318,14 @@ def maybedhcp(dev):
 	else:
 		return "dhcp"
 
-if IS_DEB:
+if IS_NETPLAN:
+	BOND_TPL_OPTS = tuple([
+                ('bond_mode', "mode: %s"),
+                ('bond_xmit_hash_policy', "bond-xmit-hash-policy: %s"),
+                ('bond_miimon', "mii-monitor-interval: %s"),
+	])
+        BSEP='\n        '
+elif IS_DEB:
 	BOND_TPL_OPTS = tuple([
 		('bond_mode', "bond-mode %s"),
 		('bond_xmit_hash_policy', "bond-xmit-hash-policy %s"),
@@ -333,10 +348,14 @@ def bondmodopts(bjson):
 			val = bjson[jopt]
 			if modpar:
 				modpar += BSEP
+                            
 			modpar += mopt % val
 		except:
 			pass
-	if IS_DEB:
+
+	if IS_NETPLAN:
+                return 'parameters:\n        %s' % modpar
+	elif IS_DEB:
 		return modpar
 	else:
 		return '"%s"' % modpar
@@ -431,13 +450,20 @@ def debiface(ljson, njson, sjson):
 
 def netpliface(ljson, njson, sjson):
 	"generate interface yaml layout, incl. static network config if needed"
+        np_bond_slaves=""
+        for npslave in bond_slaves:
+            np_bond_slaves += "      - " + npslave + "\n"
 	nm = ifname(ljson)
-	mtu = ljson["mtu"]
 	mac = ljson["ethernet_mac_address"]
 	# if nm in bond_slaves:
-        return "network:\n  version: 2\n  ethernets:\n    %s:\n      match:\n        macaddress: %s\n      mtu: %s\n      set-name: %s" % \
-	    (nm, mac, mtu, nm)
+	if nm in bond_slaves:
+            return "network:\n  version: 2\n  ethernets:\n    %s:\n      match:\n        macaddress: %s\n      set-name: %s\n" % \
+	        (nm, mac, nm)
+        else:
+            return "network:\n  version: 2\n  bonds:\n    %s:\n      dhcp4: true\n      interfaces:\n%s" % \
+                (nm, np_bond_slaves)
 
+            
 
 def process_template(template, ljson, njson, sjson, note = True):
 	"Create ifcfg-* file from templates and json"
@@ -475,7 +501,9 @@ def process_template(template, ljson, njson, sjson, note = True):
 			# TODO: Error handling
 			out += SFMT % (key, maybedhcp(nm))
 		elif mode == BONDMODOPTS:
-			if IS_DEB:
+			if IS_NETPLAN:
+				out += '      ' + bondmodopts(ljson) + '\n'
+                        elif IS_DEB:
 				out += '\t' + bondmodopts(ljson) + '\n'
 			else:
 				out += SFMT % (key, bondmodopts(ljson))

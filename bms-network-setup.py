@@ -35,11 +35,11 @@ for arg in sys.argv[1:]:
 	if arg == "-d":
 		DEBUG = True
 	elif arg == "-s":
-		IS_SUSE = True; IS_DEB = False; IS_EULER = False
+		IS_SUSE = True; IS_DEB = False; IS_EULER = False; IS_NETPLAN = False;
 	elif arg == "-u":
-		IS_DEB = True; IS_SUSE = False; IS_EULER = False
+		IS_DEB = True; IS_SUSE = False; IS_EULER = False; IS_NETPLAN = False;
 	elif arg == "-r":
-		IS_DEB = False; IS_SUSE = False; IS_EULER = False
+		IS_DEB = False; IS_SUSE = False; IS_EULER = False; IS_NETPLAN = False;
 	else:
 		six.print_("UNKNOWN ARG %s" % arg, file=sys.stderr)
 		usage()

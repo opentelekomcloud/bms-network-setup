@@ -289,8 +289,8 @@ SFMT = "%s=%s\n"
 if IS_NETPLAN:
 	IFCFG_PHY  = IFCFG_PHY_NETPLAN
 	IFCFG_BOND = IFCFG_BOND_NETPLAN
-	IFCFG_STAT = IFCFG_STATIC_DEBIAN
-	IFCFG_VLAN = IFCFG_VLAN_DEBIAN
+	IFCFG_STAT = ""
+	IFCFG_VLAN = ""
         SFMT = "      %s: %s\n"
 elif IS_DEB:
 	IFCFG_PHY  = IFCFG_PHY_DEBIAN
@@ -705,6 +705,13 @@ def process_network_hw():
 		f = open("%s/%sifcfg-%s%s" % (NETCONFPATH, PRE, nm, POST), "w")
 		six.print_(process_template(IFCFG_TMPL, ljson, njson, sjson, True), file=f)
 
+def apply_network_config():
+        if IS_NETPLAN:
+                os.system("netplan apply")
+        elif IS_DEB:
+                os.system("systemctl restart networking")
+
 # Entry point
 if __name__ == "__main__":
-	process_network_hw()
+        process_network_hw()
+        apply_network_config()

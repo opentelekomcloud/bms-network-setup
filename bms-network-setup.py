@@ -6,6 +6,8 @@
 #
 # (c) Kurt Garloff <kurt@garloff.de>, 12/2017
 # License: CC-BY-SA 3.0
+#¤
+# add NETPLAN configuration, 07/2018 (sabrina-mueller@t-systems.com)
 
 import os
 import sys
@@ -707,9 +709,7 @@ def process_network_hw():
 
 def apply_network_config():
         if IS_NETPLAN:
-                os.system("netplan apply")
-        elif IS_DEB:
-                os.system("systemctl restart networking")
+                os.system("systemctl add-wants systemd-networkd-wait-online.service bms-network-setup")
 
 # Entry point
 if __name__ == "__main__":

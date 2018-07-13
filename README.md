@@ -22,11 +22,12 @@ Linux distributions.
 ## Parameters
 
 ```
-Usage: bms-network-setup.py [-d] [-s|u|r]
+Usage: bms-network-setup.py [-d] [-s|u|r|n]
  -d: Debug: reads network_data.json and writes ifcfg-* in current dir
  -s: SuSE: assume we run on a SuSE distribution
  -u: Debian: assume we run on a Debian/Ubuntu distribution
  -r: RedHat: assume we run on a RedHat/CentOS distribution
+ -n: Netplan: assume we run on a distribution using netplan
 ```
 By default, the script produces ifcfg files for the distribution it detects
 it's currently running on.

@@ -6,7 +6,7 @@
 #
 # (c) Kurt Garloff <kurt@garloff.de>, 12/2017
 # License: CC-BY-SA 3.0
-#¤
+#
 # add NETPLAN configuration, 07/2018 (sabrina-mueller@t-systems.com)
 
 import os
@@ -19,7 +19,7 @@ import subprocess
 
 
 def usage():
-	six.print_("Usage: bms-network-setup.py [-d] [-s|u|r]", file=sys.stderr)
+	six.print_("Usage: bms-network-setup.py [-d] [-s|u|r|n]", file=sys.stderr)
 	six.print_(" -d: Debug: reads network_data.json and writes ifcfg-* in current dir", file=sys.stderr)
 	six.print_(" -s: SuSE: assume we run on a SuSE distribution", file=sys.stderr)
 	six.print_(" -u: Debian: assume we run on a Debian/Ubuntu distribution", file=sys.stderr)

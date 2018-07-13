@@ -2,13 +2,14 @@
 Script to parse network_data.json and configure ifcfg-* files from it.
 
 ## How it works
-This is a much more limited and much simpler script to enable networking on OTC Bare Metal instances.
+This is a  limited and simple script to enable networking on OTC Bare Metal instances.
 Bare Metal instances have a ConfigDrive that contains meta_data.json and network_data.json.
-The meta_data.json is unfortunately not fully correct at this point (wrong hostname) and user_data is missing,
+The meta_data.json is unfortunately not fully correct at this point (wrong hostname),
 so we prefer to use the network OpenStack DataSource via the normal cloud-init mechanism.
 However, to even get networking working, we need to parse and evaluate network_data.json.
 This scripts does this by parsing it and then writing out the network ifcfg-* files and then leaves
-it to the standard distribution networking mechanisms (wicked, ifup, NetworkManager, ...) to do the network setup.
+it to the standard distribution networking mechanisms (wicked, ifup, NetworkManager, ...) to do the network setup
+and leave it to cloud-init for all other cloud-init steps.
 
 In our package (on OpenBuildService 
 in [home:garloff:OTC](https://build.opensuse.org/package/show/home:garloff:OTC/bms-network-setup)), 

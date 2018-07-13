@@ -24,9 +24,11 @@ def usage():
 	six.print_(" -s: SuSE: assume we run on a SuSE distribution", file=sys.stderr)
 	six.print_(" -u: Debian: assume we run on a Debian/Ubuntu distribution", file=sys.stderr)
 	six.print_(" -r: RedHat: assume we run on a RedHat/CentOS distribution", file=sys.stderr)
+	six.print_(" -n: Netplan: assume we run on a distribution using netplan", file=sys.stderr)
 	sys.exit(1)
 
 # Global settings
+# If none of IS_xxx is set, we are on RedHat ...
 IS_SUSE  = os.path.exists("/etc/SuSE-release")
 IS_EULER = os.path.exists("/etc/euleros-release")
 IS_DEB   = os.path.exists("/etc/debian_version")
@@ -42,6 +44,8 @@ for arg in sys.argv[1:]:
 		IS_DEB = True; IS_SUSE = False; IS_EULER = False; IS_NETPLAN = False;
 	elif arg == "-r":
 		IS_DEB = False; IS_SUSE = False; IS_EULER = False; IS_NETPLAN = False;
+	elif arg == "-n":
+		IS_DEB = False; IS_SUSE = False; IS_EULER = False; IS_NETPLAN = True;
 	else:
 		six.print_("UNKNOWN ARG %s" % arg, file=sys.stderr)
 		usage()
@@ -293,7 +297,7 @@ if IS_NETPLAN:
 	IFCFG_BOND = IFCFG_BOND_NETPLAN
 	IFCFG_STAT = ""
 	IFCFG_VLAN = ""
-        SFMT = "      %s: %s\n"
+	SFMT = "      %s: %s\n"
 elif IS_DEB:
 	IFCFG_PHY  = IFCFG_PHY_DEBIAN
 	IFCFG_BOND = IFCFG_BOND_DEBIAN
@@ -305,7 +309,7 @@ elif IS_SUSE:
 	IFCFG_BOND = IFCFG_BOND_SUSE
 	IFCFG_STAT = IFCFG_STATIC_SUSE
 	IFCFG_VLAN = IFCFG_VLAN_SUSE
-else:
+else: # RedHat
 	IFCFG_PHY  = IFCFG_PHY_REDHAT
 	IFCFG_BOND = IFCFG_BOND_REDHAT
 	IFCFG_STAT = IFCFG_STATIC_REDHAT
@@ -322,11 +326,11 @@ def maybedhcp(dev):
 
 if IS_NETPLAN:
 	BOND_TPL_OPTS = tuple([
-                ('bond_mode', "mode: %s"),
-                ('bond_xmit_hash_policy', "bond-xmit-hash-policy: %s"),
-                ('bond_miimon', "mii-monitor-interval: %s"),
+		('bond_mode', "mode: %s"),
+		('bond_xmit_hash_policy', "bond-xmit-hash-policy: %s"),
+		('bond_miimon', "mii-monitor-interval: %s"),
 	])
-        BSEP='\n        '
+	BSEP='\n        '
 elif IS_DEB:
 	BOND_TPL_OPTS = tuple([
 		('bond_mode', "bond-mode %s"),
@@ -356,7 +360,7 @@ def bondmodopts(bjson):
 			pass
 
 	if IS_NETPLAN:
-                return 'parameters:\n        %s' % modpar
+		return 'parameters:\n        %s' % modpar
 	elif IS_DEB:
 		return modpar
 	else:
@@ -505,7 +509,7 @@ def process_template(template, ljson, njson, sjson, note = True):
 		elif mode == BONDMODOPTS:
 			if IS_NETPLAN:
 				out += '      ' + bondmodopts(ljson) + '\n'
-                        elif IS_DEB:
+			elif IS_DEB:
 				out += '\t' + bondmodopts(ljson) + '\n'
 			else:
 				out += SFMT % (key, bondmodopts(ljson))
@@ -692,15 +696,15 @@ def process_network_hw():
 		if tp == "phy":
 			IFCFG_TMPL = IFCFG_PHY
 			PRE = "60-" if IS_DEB else ""
-                        POST = ".yaml" if IS_NETPLAN else ""
+			POST = ".yaml" if IS_NETPLAN else ""
 		elif tp == "bond":
 			IFCFG_TMPL = IFCFG_BOND
 			PRE = "61-" if IS_DEB else ""
-                        POST = ".yaml" if IS_NETPLAN else ""
+			POST = ".yaml" if IS_NETPLAN else ""
 		elif tp == "vlan":
 			IFCFG_TMPL = IFCFG_VLAN
 			PRE = "62-" if IS_DEB else ""
-                        POST = ".yaml" if IS_NETPLAN else ""
+			POST = ".yaml" if IS_NETPLAN else ""
 		else:
 			six.print_("Unknown network type %s" % tp, file=sys.stderr)
 
@@ -708,8 +712,8 @@ def process_network_hw():
 		six.print_(process_template(IFCFG_TMPL, ljson, njson, sjson, True), file=f)
 
 def apply_network_config():
-        if IS_NETPLAN:
-                os.system("systemctl add-wants systemd-networkd-wait-online.service bms-network-setup")
+	if IS_NETPLAN:
+		os.system("systemctl add-wants systemd-networkd-wait-online.service bms-network-setup")
 
 # Entry point
 if __name__ == "__main__":

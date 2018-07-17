@@ -6,6 +6,8 @@
 #
 # (c) Kurt Garloff <kurt@garloff.de>, 12/2017
 # License: CC-BY-SA 3.0
+#
+# add NETPLAN configuration, 07/2018 (sabrina-mueller@t-systems.com)
 
 import os
 import sys
@@ -17,28 +19,33 @@ import subprocess
 
 
 def usage():
-	six.print_("Usage: bms-network-setup.py [-d] [-s|u|r]", file=sys.stderr)
+	six.print_("Usage: bms-network-setup.py [-d] [-s|u|r|n]", file=sys.stderr)
 	six.print_(" -d: Debug: reads network_data.json and writes ifcfg-* in current dir", file=sys.stderr)
 	six.print_(" -s: SuSE: assume we run on a SuSE distribution", file=sys.stderr)
 	six.print_(" -u: Debian: assume we run on a Debian/Ubuntu distribution", file=sys.stderr)
 	six.print_(" -r: RedHat: assume we run on a RedHat/CentOS distribution", file=sys.stderr)
+	six.print_(" -n: Netplan: assume we run on a distribution using netplan", file=sys.stderr)
 	sys.exit(1)
 
 # Global settings
+# If none of IS_xxx is set, we are on RedHat ...
 IS_SUSE  = os.path.exists("/etc/SuSE-release")
 IS_EULER = os.path.exists("/etc/euleros-release")
 IS_DEB   = os.path.exists("/etc/debian_version")
+IS_NETPLAN = os.path.exists("/etc/netplan")
 DEBUG = 0
 # Arg parsing
 for arg in sys.argv[1:]:
 	if arg == "-d":
 		DEBUG = True
 	elif arg == "-s":
-		IS_SUSE = True; IS_DEB = False; IS_EULER = False
+		IS_SUSE = True; IS_DEB = False; IS_EULER = False; IS_NETPLAN = False;
 	elif arg == "-u":
-		IS_DEB = True; IS_SUSE = False; IS_EULER = False
+		IS_DEB = True; IS_SUSE = False; IS_EULER = False; IS_NETPLAN = False;
 	elif arg == "-r":
-		IS_DEB = False; IS_SUSE = False; IS_EULER = False
+		IS_DEB = False; IS_SUSE = False; IS_EULER = False; IS_NETPLAN = False;
+	elif arg == "-n":
+		IS_DEB = False; IS_SUSE = False; IS_EULER = False; IS_NETPLAN = True;
 	else:
 		six.print_("UNKNOWN ARG %s" % arg, file=sys.stderr)
 		usage()
@@ -49,7 +56,9 @@ CONFDIR="."
 if not DEBUG:
 	WICKEDCONFPATH = "/etc/wicked/ifconfig/"
 	CONFDIR = "/etc"
-	if IS_DEB:
+	if IS_NETPLAN:
+		NETCONFPATH = "/etc/netplan/"
+	elif IS_DEB:
 		NETCONFPATH = "/etc/network/interfaces.d/"
 	elif IS_SUSE:
 		NETCONFPATH = "/etc/sysconfig/network/"
@@ -129,6 +138,8 @@ NAMESERVERS=9
 VLANNAME=10
 # special fn to compose vlan name vlan$ID
 DEBNMMODE=11
+# netplan
+NETPLMODE=13
 # deb bond slave list
 BONDSLAVES=12
 
@@ -232,6 +243,14 @@ IFCFG_STATIC_REDHAT = (
 
 
 # Template for interface cfg on Deb
+IFCFG_PHY_NETPLAN = (
+	('iface', 'name', NETPLMODE),
+	('mtu', 'mtu', OPT),
+#	('hwaddress', 'ethernet_mac_address', OPT),
+#	('address', 'no', MAYBEDHCP)
+)
+
+# Template for interface cfg on Deb
 IFCFG_PHY_DEBIAN = (
 	('iface', 'name', DEBNMMODE),
 	('mtu', 'mtu', OPT),
@@ -246,6 +265,13 @@ IFCFG_BOND_DEBIAN = (
 	('hwaddress', 'ethernet_mac_address', OPT),
 	('bond-slaves', 'no', BONDSLAVES),
 	('bond-opts', 'no', BONDMODOPTS)
+)
+# Template for bond interface cfg on NETPLAN
+IFCFG_BOND_NETPLAN = (
+	('iface', 'id', NETPLMODE),
+	('mtu', 'mtu', OPT),
+	('macaddress', 'ethernet_mac_address', OPT),
+	('mii-monitor-interval', 'bond-miimon', BONDMODOPTS)
 )
 # Template for vlans
 IFCFG_VLAN_DEBIAN = (
@@ -266,7 +292,13 @@ IFCFG_STATIC_DEBIAN = (
 SFMT = "%s=%s\n"
 #TODO: Check for other well-defined parameters (cloud-init? OpenStack standards)
 
-if IS_DEB:
+if IS_NETPLAN:
+	IFCFG_PHY  = IFCFG_PHY_NETPLAN
+	IFCFG_BOND = IFCFG_BOND_NETPLAN
+	IFCFG_STAT = ""
+	IFCFG_VLAN = ""
+	SFMT = "      %s: %s\n"
+elif IS_DEB:
 	IFCFG_PHY  = IFCFG_PHY_DEBIAN
 	IFCFG_BOND = IFCFG_BOND_DEBIAN
 	IFCFG_STAT = IFCFG_STATIC_DEBIAN
@@ -277,7 +309,7 @@ elif IS_SUSE:
 	IFCFG_BOND = IFCFG_BOND_SUSE
 	IFCFG_STAT = IFCFG_STATIC_SUSE
 	IFCFG_VLAN = IFCFG_VLAN_SUSE
-else:
+else: # RedHat
 	IFCFG_PHY  = IFCFG_PHY_REDHAT
 	IFCFG_BOND = IFCFG_BOND_REDHAT
 	IFCFG_STAT = IFCFG_STATIC_REDHAT
@@ -292,7 +324,14 @@ def maybedhcp(dev):
 	else:
 		return "dhcp"
 
-if IS_DEB:
+if IS_NETPLAN:
+	BOND_TPL_OPTS = tuple([
+		('bond_mode', "mode: %s"),
+		('bond_xmit_hash_policy', "bond-xmit-hash-policy: %s"),
+		('bond_miimon', "mii-monitor-interval: %s"),
+	])
+	BSEP='\n        '
+elif IS_DEB:
 	BOND_TPL_OPTS = tuple([
 		('bond_mode', "bond-mode %s"),
 		('bond_xmit_hash_policy', "bond-xmit-hash-policy %s"),
@@ -315,10 +354,14 @@ def bondmodopts(bjson):
 			val = bjson[jopt]
 			if modpar:
 				modpar += BSEP
+                            
 			modpar += mopt % val
 		except:
 			pass
-	if IS_DEB:
+
+	if IS_NETPLAN:
+		return 'parameters:\n        %s' % modpar
+	elif IS_DEB:
 		return modpar
 	else:
 		return '"%s"' % modpar
@@ -411,6 +454,23 @@ def debiface(ljson, njson, sjson):
 		return "auto %s\niface %s inet static\n%s" % \
 			(nm, nm, process_template(IFCFG_STAT, njson, njson, sjson, False))
 
+def netpliface(ljson, njson, sjson):
+	"generate interface yaml layout, incl. static network config if needed"
+        np_bond_slaves=""
+        for npslave in bond_slaves:
+            np_bond_slaves += "      - " + npslave + "\n"
+	nm = ifname(ljson)
+	mac = ljson["ethernet_mac_address"]
+	# if nm in bond_slaves:
+	if nm in bond_slaves:
+            return "network:\n  version: 2\n  ethernets:\n    %s:\n      match:\n        macaddress: %s\n      set-name: %s\n" % \
+	        (nm, mac, nm)
+        else:
+            return "network:\n  version: 2\n  bonds:\n    %s:\n      dhcp4: true\n      interfaces:\n%s" % \
+                (nm, np_bond_slaves)
+
+            
+
 def process_template(template, ljson, njson, sjson, note = True):
 	"Create ifcfg-* file from templates and json"
 	out = ''
@@ -431,6 +491,7 @@ def process_template(template, ljson, njson, sjson, note = True):
 				break
 	except:
 		pass
+        
 	#six.print_("Device ID %s: network %s" % (link, net))
 	for key, val, mode in template:
 		if mode == HARD:
@@ -446,7 +507,9 @@ def process_template(template, ljson, njson, sjson, note = True):
 			# TODO: Error handling
 			out += SFMT % (key, maybedhcp(nm))
 		elif mode == BONDMODOPTS:
-			if IS_DEB:
+			if IS_NETPLAN:
+				out += '      ' + bondmodopts(ljson) + '\n'
+			elif IS_DEB:
 				out += '\t' + bondmodopts(ljson) + '\n'
 			else:
 				out += SFMT % (key, bondmodopts(ljson))
@@ -471,6 +534,8 @@ def process_template(template, ljson, njson, sjson, note = True):
 			out += SFMT % (key, vlanname(ljson))
 		elif mode == DEBNMMODE:
 			out += debiface(ljson, net, sjson)
+		elif mode == NETPLMODE:
+			out += netpliface(ljson, net, sjson)
 		elif mode == BONDSLAVES:
 			out += "\t%s %s\n\tbond-primary %s\n" % (key, splist(ljson["bond_links"]), 
 				ljson["bond_links"][0])
@@ -631,18 +696,26 @@ def process_network_hw():
 		if tp == "phy":
 			IFCFG_TMPL = IFCFG_PHY
 			PRE = "60-" if IS_DEB else ""
+			POST = ".yaml" if IS_NETPLAN else ""
 		elif tp == "bond":
 			IFCFG_TMPL = IFCFG_BOND
 			PRE = "61-" if IS_DEB else ""
+			POST = ".yaml" if IS_NETPLAN else ""
 		elif tp == "vlan":
 			IFCFG_TMPL = IFCFG_VLAN
 			PRE = "62-" if IS_DEB else ""
+			POST = ".yaml" if IS_NETPLAN else ""
 		else:
 			six.print_("Unknown network type %s" % tp, file=sys.stderr)
 
-		f = open("%s/%sifcfg-%s" % (NETCONFPATH, PRE, nm), "w")
+		f = open("%s/%sifcfg-%s%s" % (NETCONFPATH, PRE, nm, POST), "w")
 		six.print_(process_template(IFCFG_TMPL, ljson, njson, sjson, True), file=f)
+
+def apply_network_config():
+	if IS_NETPLAN:
+		os.system("systemctl add-wants systemd-networkd-wait-online.service bms-network-setup")
 
 # Entry point
 if __name__ == "__main__":
-	process_network_hw()
+        process_network_hw()
+        apply_network_config()

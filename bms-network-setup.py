@@ -656,6 +656,25 @@ def rename_ifaces(ljson, hwrename=True):
 					break
 	return bondjson
 
+def ifdown(ifnm):
+	"ifdown an interface"
+	cmd = "ifdown %s" % ifnm
+	out = ""
+	try:
+		six.print_(cmd, file=sys.stderr)
+		out = subprocess.check_output(cmd.split(" "), stderr=subprocess.STDOUT)
+	except:
+		six.print_("FAIL: %s" % out, file=sys.stderr)
+
+
+def ifdown_slaves(ljson):
+	"Bring NICs down that get enslaved"
+	if not ljson:
+		return
+	bjson = rename_ifaces(ljson, False)
+	for bj in bjson:
+		for iface in bjson["bond_links"]:
+			ifdown(iface)
 
 def process_network_hw():
 	"get network_data.json and process it"
@@ -671,6 +690,8 @@ def process_network_hw():
 			pass
 		six.print_("Not running on BMS, exiting", file=sys.stderr)
 		sys.exit(0)
+	# TODO: We may have network-hotplug scripts that have ifuped to be enslaved devices
+	ifdown_slaves(network_json["links"])
 	# TODO: Do hwrename if names are not eth* rather than hardcoding SUSE and Euler.
 	bjson = rename_ifaces(network_json["links"], not(IS_SUSE or IS_EULER))
 	for bj in bjson:

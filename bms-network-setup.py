@@ -19,8 +19,9 @@ import subprocess
 
 
 def usage():
-	six.print_("Usage: bms-network-setup.py [-d] [-s|u|r|n]", file=sys.stderr)
+	six.print_("Usage: bms-network-setup.py [-d] [-o] [-s|u|r|n]", file=sys.stderr)
 	six.print_(" -d: Debug: reads network_data.json and writes ifcfg-* in current dir", file=sys.stderr)
+	six.print_(" -o: dOwn: bring interfaces down before enslaving them to a bond", file=sys.stderr)
 	six.print_(" -s: SuSE: assume we run on a SuSE distribution", file=sys.stderr)
 	six.print_(" -u: Debian: assume we run on a Debian/Ubuntu distribution", file=sys.stderr)
 	six.print_(" -r: RedHat: assume we run on a RedHat/CentOS distribution", file=sys.stderr)
@@ -33,11 +34,14 @@ IS_SUSE  = os.path.exists("/etc/SuSE-release")
 IS_EULER = os.path.exists("/etc/euleros-release")
 IS_DEB   = os.path.exists("/etc/debian_version")
 IS_NETPLAN = os.path.exists("/etc/netplan")
-DEBUG = 0
+DEBUG = False
+DOWN = False
 # Arg parsing
 for arg in sys.argv[1:]:
 	if arg == "-d":
 		DEBUG = True
+	if arg == "-o":
+		DOWN = True
 	elif arg == "-s":
 		IS_SUSE = True; IS_DEB = False; IS_EULER = False; IS_NETPLAN = False;
 	elif arg == "-u":
@@ -680,6 +684,7 @@ def process_network_hw():
 	"get network_data.json and process it"
 	global bond_slaves
 	global bond_map
+	global DOWN
 	bond_slaves=[]
 	bond_map = {}
 	ret, network_json = get_network_json_hw()
@@ -690,8 +695,8 @@ def process_network_hw():
 			pass
 		six.print_("Not running on BMS, exiting", file=sys.stderr)
 		sys.exit(0)
-	# TODO: We may have network-hotplug scripts that have ifuped to be enslaved devices
-	ifdown_slaves(network_json["links"])
+	if DOWN:
+		ifdown_slaves(network_json["links"])
 	# TODO: Do hwrename if names are not eth* rather than hardcoding SUSE and Euler.
 	bjson = rename_ifaces(network_json["links"], not(IS_SUSE or IS_EULER))
 	for bj in bjson:

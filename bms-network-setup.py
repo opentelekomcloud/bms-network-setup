@@ -334,7 +334,7 @@ if IS_NETPLAN:
 		('bond_xmit_hash_policy', "bond-xmit-hash-policy: %s"),
 		('bond_miimon', "mii-monitor-interval: %s"),
 	])
-	BSEP='\n        '
+	BSEP='\n	'
 elif IS_DEB:
 	BOND_TPL_OPTS = tuple([
 		('bond_mode', "bond-mode %s"),
@@ -358,13 +358,13 @@ def bondmodopts(bjson):
 			val = bjson[jopt]
 			if modpar:
 				modpar += BSEP
-                            
+
 			modpar += mopt % val
 		except:
 			pass
 
 	if IS_NETPLAN:
-		return 'parameters:\n        %s' % modpar
+		return 'parameters:\n	%s' % modpar
 	elif IS_DEB:
 		return modpar
 	else:
@@ -460,20 +460,20 @@ def debiface(ljson, njson, sjson):
 
 def netpliface(ljson, njson, sjson):
 	"generate interface yaml layout, incl. static network config if needed"
-        np_bond_slaves=""
-        for npslave in bond_slaves:
-            np_bond_slaves += "      - " + npslave + "\n"
+	np_bond_slaves=""
+	for npslave in bond_slaves:
+	    np_bond_slaves += "      - " + npslave + "\n"
 	nm = ifname(ljson)
 	mac = ljson["ethernet_mac_address"]
 	# if nm in bond_slaves:
 	if nm in bond_slaves:
-            return "network:\n  version: 2\n  ethernets:\n    %s:\n      match:\n        macaddress: %s\n      set-name: %s\n" % \
-	        (nm, mac, nm)
-        else:
-            return "network:\n  version: 2\n  bonds:\n    %s:\n      dhcp4: true\n      interfaces:\n%s" % \
-                (nm, np_bond_slaves)
+	    return "network:\n  version: 2\n  ethernets:\n    %s:\n      match:\n	macaddress: %s\n      set-name: %s\n" % \
+		(nm, mac, nm)
+	else:
+	    return "network:\n  version: 2\n  bonds:\n    %s:\n      dhcp4: true\n      interfaces:\n%s" % \
+		(nm, np_bond_slaves)
 
-            
+
 
 def process_template(template, ljson, njson, sjson, note = True):
 	"Create ifcfg-* file from templates and json"
@@ -495,7 +495,7 @@ def process_template(template, ljson, njson, sjson, note = True):
 				break
 	except:
 		pass
-        
+
 	#six.print_("Device ID %s: network %s" % (link, net))
 	for key, val, mode in template:
 		if mode == HARD:
@@ -743,5 +743,5 @@ def apply_network_config():
 
 # Entry point
 if __name__ == "__main__":
-        process_network_hw()
-        apply_network_config()
+	process_network_hw()
+	apply_network_config()

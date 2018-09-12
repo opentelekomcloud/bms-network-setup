@@ -30,7 +30,7 @@ def usage():
 
 # Global settings
 # If none of IS_xxx is set, we are on RedHat ...
-IS_SUSE  = os.path.exists("/etc/SuSE-release")
+IS_SUSE  = os.path.exists("/etc/SuSE-release") or os.path.exists("/etc/sysconfig/network/ifcfg.template")
 IS_EULER = os.path.exists("/etc/euleros-release")
 IS_DEB   = os.path.exists("/etc/debian_version")
 IS_NETPLAN = os.path.exists("/etc/netplan")

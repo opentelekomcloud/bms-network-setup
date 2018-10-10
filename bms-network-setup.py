@@ -610,19 +610,26 @@ def rename_if(old, new):
 		six.print_("FAIL: %s" % out, file=sys.stderr)
 
 
-def find_name(mac):
+def find_name(mac, retry = 1):
 	"Find NIC name with MAC or phys_port_id mac"
 	shortmac = mac.replace(':','')
-	for dev in os.listdir("/sys/class/net/"):
-		try:
-			devmac = open("/sys/class/net/%s/address" % dev, "r").read().rstrip()
-			if devmac == mac:
-				return dev
-			portid = open("/sys/class/net/%s/phys_port_id" % dev, "r").read().rstrip()
-			if shortmac == portid:
-				return dev
-		except:
-			pass
+	ctr = 0
+	while True:
+		for dev in os.listdir("/sys/class/net/"):
+			try:
+				devmac = open("/sys/class/net/%s/address" % dev, "r").read().rstrip()
+				if devmac == mac:
+					return dev
+				portid = open("/sys/class/net/%s/phys_port_id" % dev, "r").read().rstrip()
+				if shortmac == portid:
+					return dev
+			except:
+				pass
+		if ctr < retry:
+			ctr += 1
+			time.sleep(1)
+		else:
+			break
 	return None
 
 def rename_ifaces(ljson, hwrename=True):
@@ -635,14 +642,11 @@ def rename_ifaces(ljson, hwrename=True):
 		if link["type"] == "phy":
 			nm = link["name"]
 			mac = link["ethernet_mac_address"]
-			dev = find_name(mac)
+			dev = find_name(mac, 8)
 			# Retry (give HW discovery a chance to catch up)
 			if dev == None:
-				time.sleep(5)
-				dev = find_name(mac)
-				if dev == None:
-					dev = nm
-					six.print_("No device name for %s found, stick with %s" &(mac, nm))
+				dev = nm
+				six.print_("No device name for %s found, stick with %s" % (mac, nm), file=sys.stderr)
 			six.print_("Dev %s: %s->%s" % (link["ethernet_mac_address"], nm, dev))
 			if dev and dev != nm:
 				if hwrename:

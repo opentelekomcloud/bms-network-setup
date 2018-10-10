@@ -643,7 +643,7 @@ def rename_ifaces(ljson, hwrename=True):
 		if link["type"] == "phy":
 			nm = link["name"]
 			mac = link["ethernet_mac_address"]
-			dev = find_name(mac, 8)
+			dev = find_name(mac, 16)
 			if dev == None:
 				dev = nm
 				six.print_("No device name for %s found, stick with %s" % (mac, nm), file=sys.stderr)

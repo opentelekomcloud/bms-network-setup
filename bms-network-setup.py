@@ -633,7 +633,15 @@ def rename_ifaces(ljson, hwrename=True):
 	for link in ljson:
 		if link["type"] == "phy":
 			nm = link["name"]
-			dev = find_name(link["ethernet_mac_address"])
+			mac = link["ethernet_mac_address"]
+			dev = find_name(mac)
+			# Retry (give HW discovery a chance to catch up)
+			if dev == None:
+				time.sleep(5)
+				dev = find_name(mac)
+				if dev == None:
+					dev = nm
+					six.print_("No device name for %s found, stick with %s" &(mac, nm))
 			six.print_("Dev %s: %s->%s" % (link["ethernet_mac_address"], nm, dev))
 			if dev and dev != nm:
 				if hwrename:

@@ -614,6 +614,7 @@ def find_name(mac, retry = 1):
 	"Find NIC name with MAC or phys_port_id mac"
 	shortmac = mac.replace(':','')
 	ctr = 0
+	# Retry logic (give HW discovery a chance to catch up)
 	while True:
 		for dev in os.listdir("/sys/class/net/"):
 			try:
@@ -643,7 +644,6 @@ def rename_ifaces(ljson, hwrename=True):
 			nm = link["name"]
 			mac = link["ethernet_mac_address"]
 			dev = find_name(mac, 8)
-			# Retry (give HW discovery a chance to catch up)
 			if dev == None:
 				dev = nm
 				six.print_("No device name for %s found, stick with %s" % (mac, nm), file=sys.stderr)

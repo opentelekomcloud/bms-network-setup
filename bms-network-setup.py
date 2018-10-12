@@ -17,12 +17,14 @@ import logging
 import base64
 import six
 import subprocess
+import glob
 
 
 def usage():
-	six.print_("Usage: bms-network-setup.py [-d] [-o] [-s|u|r|n]", file=sys.stderr)
+	six.print_("Usage: bms-network-setup.py [-d] [-o] [-c] [-s|u|r|n]", file=sys.stderr)
 	six.print_(" -d: Debug: reads network_data.json and writes ifcfg-* in current dir", file=sys.stderr)
-	six.print_(" -o: dOwn: bring interfaces down before enslaving them to a bond", file=sys.stderr)
+	six.print_(" -o: Own: bring interfaces down before enslaving them to a bond", file=sys.stderr)
+	six.print_(" -c: Remove ifcfg-e* ifor non-existing devices", file=sys.stderr)
 	six.print_(" -s: SuSE: assume we run on a SuSE distribution", file=sys.stderr)
 	six.print_(" -u: Debian: assume we run on a Debian/Ubuntu distribution", file=sys.stderr)
 	six.print_(" -r: RedHat: assume we run on a RedHat/CentOS distribution", file=sys.stderr)
@@ -37,12 +39,15 @@ IS_DEB   = os.path.exists("/etc/debian_version")
 IS_NETPLAN = os.path.exists("/etc/netplan")
 DEBUG = False
 DOWN = False
+CLEAN = False
 # Arg parsing
 for arg in sys.argv[1:]:
 	if arg == "-d":
 		DEBUG = True
-	if arg == "-o":
+	elif arg == "-o":
 		DOWN = True
+	elif arg == "-c":
+		CLEAN = True
 	elif arg == "-s":
 		IS_SUSE = True; IS_DEB = False; IS_EULER = False; IS_NETPLAN = False;
 	elif arg == "-u":
@@ -617,10 +622,16 @@ def find_name(mac, retry = 1):
 	# Retry logic (give HW discovery a chance to catch up)
 	while True:
 		for dev in os.listdir("/sys/class/net/"):
+			if dev == "lo":
+				continue
 			try:
 				devmac = open("/sys/class/net/%s/address" % dev, "r").read().rstrip()
 				if devmac == mac:
 					return dev
+				if os.access("/sys/class/net/%s/bonding_slave/perm_hwaddr" % dev, os.R_OK):
+					devmac = open("/sys/class/net/%s/bonding_slave/perm_hwaddr" % dev, "r").read().rstrip()
+					if devmac == mac:
+						return dev
 				portid = open("/sys/class/net/%s/phys_port_id" % dev, "r").read().rstrip()
 				if shortmac == portid:
 					return dev
@@ -693,11 +704,32 @@ def ifdown_slaves(ljson):
 		for iface in bjson["bond_links"]:
 			ifdown(iface)
 
+def clean_miss_ifaces(njson):
+	"Remove ifcfg-e* files for non-existing ifaces"
+	del_cand = glob.glob("%s/ifcfg-e*" % NETCONFPATH)
+	for cand in del_cand:
+		ifnm = os.path.basename(cand)
+		ifnm = ifnm[6:]
+		# Do not rmv if phys dev exists
+		if os.access("/sys/class/net/%s" % ifnm, os.R_OK):
+			continue
+		found = False
+		for lnk in njson:
+			try:
+				if lnk["id"] == ifnm:
+					found = True
+			except:
+				pass
+		if found:
+			continue
+		six.print_("Info: Remove %s" % cand, file=sys.stderr)
+		os.unlink(cand)
+
+
 def process_network_hw():
 	"get network_data.json and process it"
-	global bond_slaves
-	global bond_map
-	global DOWN
+	global bond_slaves, bond_map
+	global DOWN, CLEAN
 	bond_slaves=[]
 	bond_map = {}
 	ret, network_json = get_network_json_hw()
@@ -749,6 +781,8 @@ def process_network_hw():
 
 		f = open("%s/%sifcfg-%s%s" % (NETCONFPATH, PRE, nm, POST), "w")
 		six.print_(process_template(IFCFG_TMPL, ljson, njson, sjson, True), file=f)
+	if CLEAN:
+		clean_miss_ifaces(network_json["links"])
 
 def apply_network_config():
 	if IS_NETPLAN:

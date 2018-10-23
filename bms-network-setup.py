@@ -340,7 +340,7 @@ if IS_NETPLAN:
 		('bond_xmit_hash_policy', "bond-xmit-hash-policy: %s"),
 		('bond_miimon', "mii-monitor-interval: %s"),
 	])
-	BSEP='\n	'
+	BSEP='\n        '
 elif IS_DEB:
 	BOND_TPL_OPTS = tuple([
 		('bond_mode', "bond-mode %s"),
@@ -370,7 +370,7 @@ def bondmodopts(bjson):
 			pass
 
 	if IS_NETPLAN:
-		return 'parameters:\n	%s' % modpar
+		return 'parameters:\n        %s' % modpar
 	elif IS_DEB:
 		return modpar
 	else:
@@ -473,7 +473,7 @@ def netpliface(ljson, njson, sjson):
 	mac = ljson["ethernet_mac_address"]
 	# if nm in bond_slaves:
 	if nm in bond_slaves:
-	    return "network:\n  version: 2\n  ethernets:\n    %s:\n      match:\n	macaddress: %s\n      set-name: %s\n" % \
+	    return "network:\n  version: 2\n  ethernets:\n    %s:\n      match:\n        macaddress: %s\n      set-name: %s\n" % \
 		(nm, mac, nm)
 	else:
 	    return "network:\n  version: 2\n  bonds:\n    %s:\n      dhcp4: true\n      interfaces:\n%s" % \

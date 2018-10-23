@@ -628,7 +628,7 @@ def find_name(mac, retry = 1):
 				devmac = open("/sys/class/net/%s/address" % dev, "r").read().rstrip()
 				if devmac == mac:
 					return dev
-				if os.access("/sys/class/net/%s/bonding_slave/perm_hwaddr" % dev, os.R_OK):
+				if os.path.exists("/sys/class/net/%s/bonding_slave/perm_hwaddr" % dev):
 					devmac = open("/sys/class/net/%s/bonding_slave/perm_hwaddr" % dev, "r").read().rstrip()
 					if devmac == mac:
 						return dev
@@ -711,7 +711,7 @@ def clean_miss_ifaces(njson):
 		ifnm = os.path.basename(cand)
 		ifnm = ifnm[6:]
 		# Do not rmv if phys dev exists
-		if os.access("/sys/class/net/%s" % ifnm, os.R_OK):
+		if os.path.exists("/sys/class/net/%s" % ifnm):
 			continue
 		found = False
 		for lnk in njson:

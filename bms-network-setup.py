@@ -337,7 +337,7 @@ def maybedhcp(dev):
 if IS_NETPLAN:
 	BOND_TPL_OPTS = tuple([
 		('bond_mode', "mode: %s"),
-		('bond_xmit_hash_policy', "bond-xmit-hash-policy: %s"),
+		('bond_xmit_hash_policy', "transmit-hash-policy: %s"),
 		('bond_miimon', "mii-monitor-interval: %s"),
 	])
 	BSEP='\n        '

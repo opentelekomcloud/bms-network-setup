@@ -362,6 +362,8 @@ def bondmodopts(bjson):
 	for jopt, mopt in BOND_TPL_OPTS:
 		try:
 			val = bjson[jopt]
+			if IS_NETPLAN and jopt == "bond_mode" and val == '1':
+				val = "active-backup"
 			if modpar:
 				modpar += BSEP
 
@@ -725,6 +727,10 @@ def clean_miss_ifaces(njson):
 		six.print_("Info: Remove %s" % cand, file=sys.stderr)
 		os.unlink(cand)
 
+def clean_netplan_ifaces(njson):
+        ci_bond0_file = "/etc/netplan/50-cloud-init.yaml"
+        if os.path.exists(ci_bond0_file):
+            os.remove(ci_bond0_file)
 
 def process_network_hw():
 	"get network_data.json and process it"
@@ -761,6 +767,7 @@ def process_network_hw():
 		pass
 	open("%s/is_bms" % CONFDIR, "w")
 	#six.print_(network_json)
+	clean_netplan_ifaces(njson)
 	for ljson in network_json["links"]:
 		tp = ljson["type"]
 		nm = ifname(ljson)

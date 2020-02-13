@@ -5,7 +5,7 @@
 # Losely based on Huawei's bms-network-config.
 #
 # (c) Kurt Garloff <kurt@garloff.de>, 12/2017
-# License: CC-BY-SA 3.0
+# License: CC-BY-SA-3.0
 #
 # add NETPLAN configuration, 07/2018 (sabrina-mueller@t-systems.com)
 
@@ -24,7 +24,7 @@ def usage():
 	six.print_("Usage: bms-network-setup.py [-d] [-o] [-c] [-s|u|r|n]", file=sys.stderr)
 	six.print_(" -d: Debug: reads network_data.json and writes ifcfg-* in current dir", file=sys.stderr)
 	six.print_(" -o: Own: bring interfaces down before enslaving them to a bond", file=sys.stderr)
-	six.print_(" -c: Remove ifcfg-e* ifor non-existing devices", file=sys.stderr)
+	six.print_(" -c: Remove ifcfg-e* for non-existing devices", file=sys.stderr)
 	six.print_(" -s: SuSE: assume we run on a SuSE distribution", file=sys.stderr)
 	six.print_(" -u: Debian: assume we run on a Debian/Ubuntu distribution", file=sys.stderr)
 	six.print_(" -r: RedHat: assume we run on a RedHat/CentOS distribution", file=sys.stderr)
@@ -362,6 +362,8 @@ def bondmodopts(bjson):
 	for jopt, mopt in BOND_TPL_OPTS:
 		try:
 			val = bjson[jopt]
+			if IS_NETPLAN and jopt == "bond_mode" and val == '1':
+				val = "active-backup"
 			if modpar:
 				modpar += BSEP
 
@@ -725,6 +727,10 @@ def clean_miss_ifaces(njson):
 		six.print_("Info: Remove %s" % cand, file=sys.stderr)
 		os.unlink(cand)
 
+def clean_netplan_ifaces(njson):
+	ci_bond0_file = "/etc/netplan/50-cloud-init.yaml"
+	if os.path.exists(ci_bond0_file):
+	    os.remove(ci_bond0_file)
 
 def process_network_hw():
 	"get network_data.json and process it"
@@ -761,6 +767,7 @@ def process_network_hw():
 		pass
 	open("%s/is_bms" % CONFDIR, "w")
 	#six.print_(network_json)
+	clean_netplan_ifaces(njson)
 	for ljson in network_json["links"]:
 		tp = ljson["type"]
 		nm = ifname(ljson)

@@ -1,0 +1,17 @@
+[Unit]
+Description=BareMetal Network Setup
+DefaultDependencies=no
+After=local-fs.target
+Wants=local-fs.target
+Before=cloud-init-local.service network-pre.target
+#ConditionPathExists=/dev/disk/by-label/config-2
+#ConditionVirtualization=none
+
+[Service]
+Type=oneshot
+ExecStart=/opt/otc/bms-setup/bms-setup.sh
+RemainAfterExit=yes
+TimeoutSec=22
+
+[Install]
+WantedBy=cloud-init.target

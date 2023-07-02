@@ -1,0 +1,98 @@
+#!/bin/sh
+
+### BEGIN INIT INFO
+# Provides:          bms-network-setup
+# Required-Start:    $local_fs
+# Should-Start:      $null
+# Required-Stop:     $null
+# Should-Stop:       $null
+# Default-Start:     2 3 5
+# Default-Stop:      0 1 6
+# Short-Description: bms-network-setup
+# Description:       bms-network-setup
+### END INIT INFO
+
+# Return values acc. to LSB for all commands but status:
+# 0       - success
+# 1       - generic or unspecified error
+# 2       - invalid or excess argument(s)
+# 3       - unimplemented feature (e.g. "reload")
+# 4       - user had insufficient privileges
+# 5       - program is not installed
+# 6       - program is not configured
+# 7       - program is not running
+# 8--199  - reserved (8--99 LSB, 100--149 distrib, 150--199 appl)
+# 
+# Note that starting an already running service, stopping
+# or restarting a not-running service as well as the restart
+# with force-reload (in case signaling is not supported) are
+# considered a success.
+
+RETVAL=0
+
+prog="bms-setup.sh"
+network_config="/opt/otc/bms-setup/bms-setup.sh"
+
+. /etc/rc.status
+rc_reset
+
+start() {
+    [ -x $network_config ] || return 5
+
+    echo -n "Starting $prog: "
+    $network_config
+    RETVAL=$?
+    return $RETVAL
+}
+
+stop() {
+    echo -n "Shutting down $prog: "
+    # No-op
+    RETVAL=7
+    return $RETVAL
+}
+
+case "$1" in
+    start)
+        start
+        RETVAL=$?
+        ;;
+    stop)
+        stop
+        RETVAL=$?
+        ;;
+    restart|try-restart|condrestart)
+        ## Stop the service and regardless of whether it was
+        ## running or not, start it again.
+        # 
+        ## Note: try-restart is now part of LSB (as of 1.9).
+        ## RH has a similar command named condrestart.
+        start
+        RETVAL=$?
+        ;;
+    reload|force-reload)
+        # It does not support reload
+        RETVAL=3
+        ;;
+    status)
+        echo -n "Checking for service $prog:"
+        RETVAL=3
+	if test -e /etc/is_bms; then RETVAL=0; fi
+        #lsmod | grep 8021q >/dev/null 2>&1 && RETVAL=0
+        # Return value is slightly different for the status command:
+        # 0 - service up and running
+        # 1 - service dead, but /var/run/  pid  file exists
+        # 2 - service dead, but /var/lock/ lock file exists
+        # 3 - service not running (unused)
+        # 4 - service status unknown :-(
+        # 5--199 reserved (5--99 LSB, 100--149 distro, 150--199 appl.)
+        ;;
+    *)
+        echo "Usage: $0 {start|stop|status|try-restart|condrestart|restart|force-reload|reload}"
+        RETVAL=3
+        ;;
+esac
+
+_rc_status=$RETVAL
+rc_status -v
+rc_exit

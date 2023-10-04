@@ -247,7 +247,6 @@ IFCFG_STATIC_REDHAT = (
 	('BOOTPROTO', 'none', HARD),	# static?
 	('IPADDR', 'ip_address', MAND),	# ADDRESS?
 	('NETMASK', 'netmask', MAND),
-	('GATEWAY', 'gateway', OPT),
 	('DNSx', '', NAMESERVERS),
 )
 

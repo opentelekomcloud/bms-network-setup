@@ -511,7 +511,10 @@ def process_template(template, ljson, njson, sjson, note = True):
 		elif mode == OPT or mode == MAND:
 			try:
 				jval = ljson[val]
-				out += SFMT % (key, jval)
+				if jval == None:                                
+					pass
+				else:
+					out += SFMT % (key, jval)
 			except:
 				if mode == MAND:
 					LOG.error("Mandatory value %s not found for %s setting" % (val, key))

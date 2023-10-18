@@ -389,7 +389,7 @@ def bondslavex(btpl):
 
 def bondnm(iface):
 	"derive bondN name from interfaceN string"
-	if iface[:9] == "interface":
+	if iface.startswith("interface"):
 		return "bond%s" % iface[9:]
 	else:
 		return iface
@@ -425,7 +425,7 @@ def bonddhcp(njson, sjson):
 	"BOOTPROTO=dhcp or static config from network settings"
 	global FIRST
 	#six.print_(njson)
-	if njson["type"][-4:] == "dhcp":
+	if njson["type"].endswith("dhcp"):
 		if IS_SUSE and "gateway" in njson and FIRST:
 			FIRST = False
 			return "BOOTPROTO=dhcp\nDHCLIENT_PRIMARY_DEVICE=yes\n"
@@ -466,7 +466,7 @@ def debiface(ljson, njson, sjson):
 		return "auto %s\niface %s inet static\n%s" % \
 			(nm, nm, process_template(IFCFG_STAT, njson, njson, sjson, False))
 
-def netpliface(ljson, njson, sjson):
+def netpliface(ljson):
 	"generate interface yaml layout, incl. static network config if needed"
 	np_bond_slaves=""
 	for npslave in bond_slaves:
@@ -491,7 +491,7 @@ def process_template(template, ljson, njson, sjson, note = True):
 	# Fill default name
 	try:
 		nm = ljson["name"]
-	except:
+	except Exception:
 		pass
 	# Find network of interface
 	net = None
@@ -501,7 +501,7 @@ def process_template(template, ljson, njson, sjson, note = True):
 			if nets["link"] == link:
 				net = nets
 				break
-	except:
+	except Exception:
 		pass
 
 	#six.print_("Device ID %s: network %s" % (link, net))
@@ -511,11 +511,9 @@ def process_template(template, ljson, njson, sjson, note = True):
 		elif mode == OPT or mode == MAND:
 			try:
 				jval = ljson[val]
-				if jval == None:                                
-					pass
-				else:
-					out += SFMT % (key, jval)
-			except:
+				if jval is not None:
+				    out += SFMT % (key, jval)
+			except Exception:
 				if mode == MAND:
 					LOG.error("Mandatory value %s not found for %s setting" % (val, key))
 		elif mode == MAYBEDHCP:
@@ -548,7 +546,7 @@ def process_template(template, ljson, njson, sjson, note = True):
 		elif mode == DEBNMMODE:
 			out += debiface(ljson, net, sjson)
 		elif mode == NETPLMODE:
-			out += netpliface(ljson, net, sjson)
+			out += netpliface(ljson)
 		elif mode == BONDSLAVES:
 			out += "\t%s %s\n\tbond-primary %s\n" % (key, splist(ljson["bond_links"]), 
 				ljson["bond_links"][0])
@@ -614,7 +612,7 @@ def rename_if(old, new):
 	try:
 		out = subprocess.check_output(cmd1.split(" "), stderr=subprocess.STDOUT)
 		out = subprocess.check_output(cmd2.split(" "), stderr=subprocess.STDOUT)
-	except:
+	except Exception:
 		six.print_("FAIL: %s" % out, file=sys.stderr)
 
 
@@ -638,7 +636,7 @@ def find_name(mac, retry = 1):
 				portid = open("/sys/class/net/%s/phys_port_id" % dev, "r").read().rstrip()
 				if shortmac == portid:
 					return dev
-			except:
+			except Exception:
 				pass
 		if ctr < retry:
 			ctr += 1
@@ -694,7 +692,7 @@ def ifdown(ifnm):
 	try:
 		six.print_(cmd, file=sys.stderr)
 		out = subprocess.check_output(cmd.split(" "), stderr=subprocess.STDOUT)
-	except:
+	except Exception:
 		six.print_("FAIL: %s" % out, file=sys.stderr)
 
 
@@ -728,7 +726,7 @@ def clean_miss_ifaces(njson):
 		six.print_("Info: Remove %s" % cand, file=sys.stderr)
 		os.unlink(cand)
 
-def clean_netplan_ifaces(njson):
+def clean_netplan_ifaces():
 	ci_bond0_file = "/etc/netplan/50-cloud-init.yaml"
 	if os.path.exists(ci_bond0_file):
 	    os.remove(ci_bond0_file)
@@ -743,7 +741,7 @@ def process_network_hw():
 	if ret:
 		try:
 			os.unlink("%s/is_bms" % CONFDIR)
-		except:
+		except Exception:
 			pass
 		six.print_("Not running on BMS, exiting", file=sys.stderr)
 		sys.exit(0)
@@ -764,26 +762,27 @@ def process_network_hw():
 	try:
 		sjson = network_json["services"]
 		njson = network_json["networks"]
-	except:
+	except Exception:
 		pass
 	open("%s/is_bms" % CONFDIR, "w")
 	#six.print_(network_json)
-	clean_netplan_ifaces(njson)
+	clean_netplan_ifaces()
 	for ljson in network_json["links"]:
 		tp = ljson["type"]
 		nm = ifname(ljson)
+		dot_yaml = ".yaml"
 		if tp == "phy":
 			IFCFG_TMPL = IFCFG_PHY
 			PRE = "60-" if IS_DEB else ""
-			POST = ".yaml" if IS_NETPLAN else ""
+			POST = dot_yaml if IS_NETPLAN else ""
 		elif tp == "bond":
 			IFCFG_TMPL = IFCFG_BOND
 			PRE = "61-" if IS_DEB else ""
-			POST = ".yaml" if IS_NETPLAN else ""
+			POST = dot_yaml if IS_NETPLAN else ""
 		elif tp == "vlan":
 			IFCFG_TMPL = IFCFG_VLAN
 			PRE = "62-" if IS_DEB else ""
-			POST = ".yaml" if IS_NETPLAN else ""
+			POST = dot_yaml if IS_NETPLAN else ""
 		else:
 			six.print_("Unknown network type %s" % tp, file=sys.stderr)
 

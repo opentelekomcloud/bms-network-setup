@@ -545,8 +545,6 @@ def process_template(template, ljson, njson, sjson, note = True):
 			out += "%s" % nameservers(sjson)
 		elif mode == VLANNAME:
 			out += SFMT % (key, vlanname(ljson))
-		elif mode == VLANNAME:
-			out += SFMT % (key, vlanname(ljson))
 		elif mode == DEBNMMODE:
 			out += debiface(ljson, net, sjson)
 		elif mode == NETPLMODE:
